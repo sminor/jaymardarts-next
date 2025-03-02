@@ -30,6 +30,13 @@
   /* Button Colors */
   --button-background: var(--color7);
   --button-text: var(--color1);
+
+  /* Announcement Colors */
+  --announcement-background: var(--color2);
+  --announcement-text: var(--color4);
+  --announcement-title: var(--color7);
+  --announcement-paused-bg: var(--color3);
+  --announcement-paused-text: var(--color7);
 }
 
 body {
@@ -37,3 +44,48 @@ body {
   background: var(--background-main);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Announcement styling */
+.announcement-content p {
+  margin-bottom: 1em;
+}
+
+.announcement-content ul {
+  list-style-type: disc; /* Add bullet points */
+  margin-left: 20px; /* Add left margin for list indentation */
+  margin-bottom: 1em;
+}
+
+.announcement-content li {
+  margin-bottom: 0.5em;
+}
+
+.announcement-content a {
+    color: var(--text-link); /* Link Color */
+    text-decoration: underline; /* Underline */
+}
+.announcement-content a:hover{
+  color: var(--text-highlight); /* Hover color*/
+}
+
+.announcement-swiper {
+  padding-bottom: 3rem; /* Increased padding-bottom for extra space */
+}
+
+/* Pagination Container Styles */
+.announcement-swiper .swiper-pagination {
+  position: relative; /* allows top to be used */
+  bottom: -2.5rem; /* this will move the container down */
+}
+
+/* Pagination Bullets Styles */
+.announcement-swiper .swiper-pagination-bullet {
+  background-color: var(--color4); /* Set the color of the pagination dots */
+  opacity: 0.5; /* Set the opacity of the pagination dots */
+}
+
+.announcement-swiper .swiper-pagination-bullet-active {
+  background-color: var(--color7); /* Set the color of the active pagination dot */
+  opacity: 1; /* Set the opacity of the active pagination dot */
+}
+

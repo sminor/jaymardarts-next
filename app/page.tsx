@@ -8,6 +8,7 @@ import {
   FaUsers,
   FaChartBar,
 } from 'react-icons/fa';
+import Announcement from './components/Announcement'; // Updated import
 
 const Home = () => {
 
@@ -27,13 +28,19 @@ const Home = () => {
           </div>
         </div>
       </header>
+       {/* Announcement  */}
+       <section className="w-full px-4">
+        <div className="container max-w-screen-xl mx-auto">
+          <Announcement page="home" autoplayDelay={6000} />
+        </div>
+      </section>
 
       {/* Quick Links */}
       <section className="p-4 w-full">
         <div className="container max-w-screen-xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className='flex-1'>
-              <Button href="/locations" icon={<FaMapMarkerAlt size={32} />}>
+              <Button href="/locations" icon={<FaMapMarkerAlt size={32} />} >
                 Locations
               </Button>
             </div>
@@ -43,7 +50,7 @@ const Home = () => {
               </Button>
             </div>
             <div className='flex-1'>
-              <Button icon={<FaUsers size={32} />}>
+              <Button href="/leagues" icon={<FaUsers size={32} />}>
                 Leagues
               </Button>
             </div>
