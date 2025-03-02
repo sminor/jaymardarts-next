@@ -9,7 +9,8 @@ interface ButtonProps {
   disabled?: boolean;
   icon?: React.ReactNode;
   type?: 'button' | 'submit' | 'reset';
-  iconPosition?: 'top' | 'left' | 'right' | 'bottom'; // Supports all four positions
+  iconPosition?: 'top' | 'left' | 'right' | 'bottom';
+  className?: string; 
 }
 
 // Static styles
@@ -28,6 +29,7 @@ const Button: React.FC<ButtonProps> = ({
   icon,
   type = 'button',
   iconPosition = 'top',
+  className = '',
 }) => {
   // Determine flex direction based on icon position
   let flexDirection = 'flex-col'; // Default to icon on top
@@ -49,7 +51,7 @@ const Button: React.FC<ButtonProps> = ({
   const contentStyles = isIconOnly ? 'flex items-center justify-center' : `flex ${flexDirection} items-center gap-2`;
 
   // Combine styles based on conditions
-  const combinedStyles = `${baseStyles} ${!disabled ? hoverStyles : ''} ${disabled ? disabledStyles : ''} ${focusStyles}`;
+  const combinedStyles = `${baseStyles} ${!disabled ? hoverStyles : ''} ${disabled ? disabledStyles : ''} ${focusStyles} ${className || ''}`;
 
   // Button content structure
   const ButtonContent = (

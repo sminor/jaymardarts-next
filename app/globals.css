@@ -19,8 +19,8 @@
   /* Background Colors */
   --background-main: var(--color1);
   --background-secondary: var(--color2);
-  --background-navbar: var(--color3);
-  --background-footer: var(--color3);
+  --background-navbar: var(--color2);
+  --background-footer: var(--color2);
 
   /* Text Colors */
   --text-main: var(--color4);
@@ -32,11 +32,20 @@
   --button-text: var(--color1);
 
   /* Announcement Colors */
-  --announcement-background: var(--color2);
+  --announcement-background: var(--color3);
   --announcement-text: var(--color4);
   --announcement-title: var(--color7);
   --announcement-paused-bg: var(--color3);
   --announcement-paused-text: var(--color7);
+
+  /* Card Colors */
+  --card-background: var(--color3);
+  --card-text: var(--color4);
+  --card-title: var(--color7);
+  --card-highlight: var(--color7);
+  --card-new: var(--color5);
+  --card-today: var(--color6);
+  --card-special: var(--color5);
 }
 
 body {
