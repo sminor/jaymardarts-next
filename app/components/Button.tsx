@@ -1,50 +1,65 @@
 'use client';
+import React from 'react';
 import Link from 'next/link';
 
 interface ButtonProps {
-  children: React.ReactNode;
+  children?: React.ReactNode; // Text content (optional)
   onClick?: () => void;
   href?: string;
-  className?: string;
   disabled?: boolean;
   icon?: React.ReactNode;
-  size?: 'small' | 'medium' | 'large';
+  type?: 'button' | 'submit' | 'reset';
+  iconPosition?: 'top' | 'left' | 'right' | 'bottom'; // Supports all four positions
 }
 
+// Static styles
+const baseStyles =
+  'py-2 px-4 rounded-md transition-colors duration-300 flex items-center justify-center w-full transition-opacity bg-[var(--button-background)] text-[var(--button-text)]';
+const hoverStyles = 'hover:opacity-70';
+const disabledStyles = 'opacity-50 cursor-not-allowed';
+const focusStyles = 'focus:outline-none focus:ring-2 focus:ring-offset-2';
+
+// Button component
 const Button: React.FC<ButtonProps> = ({
   children,
   onClick,
   href,
-  className,
-  disabled = false, // Default to false
+  disabled = false,
   icon,
-  size = 'medium', // Default to medium
+  type = 'button',
+  iconPosition = 'top',
 }) => {
-  const baseStyles =
-    'py-2 px-4 rounded-md transition-colors duration-300 flex flex-col items-center justify-center w-full transition-opacity bg-[var(--button-background)] text-[var(--button-text)]';
+  // Determine flex direction based on icon position
+  let flexDirection = 'flex-col'; // Default to icon on top
 
-  const hoverStyle = !disabled ? 'hover:opacity-70' : '';
+  switch (iconPosition) {
+    case 'left':
+      flexDirection = 'flex-row'; // Icon on the left
+      break;
+    case 'right':
+      flexDirection = 'flex-row-reverse'; // Icon on the right
+      break;
+    case 'bottom':
+      flexDirection = 'flex-col-reverse'; // Icon on the bottom
+      break;
+  }
 
-  const disabledStyles = disabled ? 'opacity-50 cursor-not-allowed' : '';
+  // If there is only an icon, center it properly
+  const isIconOnly = !children;
+  const contentStyles = isIconOnly ? 'flex items-center justify-center' : `flex ${flexDirection} items-center gap-2`;
 
-  const focusStyles = 'focus:outline-none focus:ring-2 focus:ring-offset-2';
+  // Combine styles based on conditions
+  const combinedStyles = `${baseStyles} ${!disabled ? hoverStyles : ''} ${disabled ? disabledStyles : ''} ${focusStyles}`;
 
-  const sizeStyles = {
-    // New size styles
-    small: 'text-sm py-1 px-2',
-    medium: 'text-base py-2 px-4',
-    large: 'text-lg py-3 px-6',
-  };
-
-  const combinedStyles = `${baseStyles} ${hoverStyle} ${disabledStyles} ${focusStyles} ${sizeStyles[size]} ${className}`; //added focusstyles here
-
+  // Button content structure
   const ButtonContent = (
-    <div className="flex flex-col items-center justify-center">
-      {icon && <div className="mb-2">{icon}</div>}
-      {children} {/* Render children directly */}
+    <div className={contentStyles}>
+      {icon && <span>{icon}</span>}
+      {children && <span>{children}</span>}
     </div>
   );
 
+  // If href is provided and button is not disabled, render a Link
   if (href && !disabled) {
     return (
       <Link href={href} className={combinedStyles}>
@@ -53,8 +68,9 @@ const Button: React.FC<ButtonProps> = ({
     );
   }
 
+  // Default button
   return (
-    <button onClick={onClick} className={combinedStyles} disabled={disabled}>
+    <button onClick={onClick} className={combinedStyles} disabled={disabled} type={type}>
       {ButtonContent}
     </button>
   );
