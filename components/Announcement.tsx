@@ -29,7 +29,6 @@ interface AnnouncementProps {
 
 const Announcement: React.FC<AnnouncementProps> = ({ page, autoplayDelay = 5000, hideIfNone = false }) => {
   const [announcements, setAnnouncements] = useState<AnnouncementData[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [maxHeight, setMaxHeight] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -37,22 +36,18 @@ const Announcement: React.FC<AnnouncementProps> = ({ page, autoplayDelay = 5000,
 
   // Fetch announcements from the database
   useEffect(() => {
-    setIsLoading(true);
-
     const getAnnouncements = async () => {
       try {
         const { data, error } = await supabase
           .from('announcements')
           .select('*')
-          .eq('page', page);
+          .or(`page.eq.${page},page.eq.all,page.ilike.%${page}%`);
 
         if (error) throw error;
         setAnnouncements(data || []);
       } catch (err) {
         console.error(`Error fetching announcements: ${err instanceof Error ? err.message : 'Unknown error'}`);
         setError('Unable to load announcements. Please check back later.');
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -61,7 +56,7 @@ const Announcement: React.FC<AnnouncementProps> = ({ page, autoplayDelay = 5000,
 
   // Adjust slide heights and ensure autoplay starts
   useEffect(() => {
-    if (announcements.length > 0 || isLoading || error) {
+    if (announcements.length > 0) {
       setTimeout(() => {
         const slides = document.querySelectorAll('.announcement-content');
         let maxH = 0;
@@ -72,11 +67,10 @@ const Announcement: React.FC<AnnouncementProps> = ({ page, autoplayDelay = 5000,
       }, 100);
     }
 
-    // Start autoplay if multiple announcements exist
     if (swiperRef.current?.autoplay && announcements.length > 1 && !swiperRef.current.autoplay.running) {
       swiperRef.current.autoplay.start();
     }
-  }, [announcements, isLoading, error]);
+  }, [announcements]);
 
   // Handles tap-to-pause and advances to the next slide
   const handleTap = () => {
@@ -93,23 +87,10 @@ const Announcement: React.FC<AnnouncementProps> = ({ page, autoplayDelay = 5000,
   };
 
   // Conditional styles based on state
-  const combinedStyles = `${baseStyles} ${
-    isLoading ? 'animate-pulse items-center justify-center' : ''
-  } ${error && announcements.length === 0 ? 'text-red-500 items-center justify-center' : ''} ${
-    !isLoading && !error && announcements.length === 0 ? 'items-center justify-center' : ''
-  } ${announcements.length > 0 ? 'flex flex-col mb-2' : ''}`;
-
-  // Helper function for rendering static message slides
-  const renderMessageSlide = (message: string) => (
-    <SwiperSlide>
-      <div className={combinedStyles} style={{ minHeight: maxHeight > 0 ? maxHeight : 'auto' }}>
-        {message}
-      </div>
-    </SwiperSlide>
-  );
+  const combinedStyles = `${baseStyles} ${announcements.length > 0 ? 'flex flex-col mb-2' : ''}`;
 
   // Hide the component if `hideIfNone` is enabled and there are no announcements
-  if (hideIfNone && !isLoading && !error && announcements.length === 0) {
+  if (hideIfNone && !error && announcements.length === 0) {
     return null;
   }
 
@@ -126,13 +107,29 @@ const Announcement: React.FC<AnnouncementProps> = ({ page, autoplayDelay = 5000,
           if (announcements.length > 1) swiper.autoplay.start();
         }}
       >
-        {isLoading && renderMessageSlide('Loading announcements...')}
-        {error && announcements.length === 0 && renderMessageSlide('Unable to load announcements. Please try again.')}
-        {!isLoading && !error && announcements.length === 0 && renderMessageSlide('No announcements at this time.')}
+        {error && (
+          <SwiperSlide>
+            <div className={combinedStyles} style={{ minHeight: maxHeight > 0 ? maxHeight : 'auto' }}>
+              <p className="text-red-500">{error}</p>
+            </div>
+          </SwiperSlide>
+        )}
+
+        {announcements.length === 0 && !error && hideIfNone === false && (
+          <SwiperSlide>
+            <div className={combinedStyles} style={{ minHeight: maxHeight > 0 ? maxHeight : 'auto' }}>
+              No announcements at this time.
+            </div>
+          </SwiperSlide>
+        )}
 
         {announcements.map((announcement) => (
           <SwiperSlide key={announcement.id}>
-            <div className={combinedStyles} style={{ minHeight: maxHeight > 0 ? maxHeight : 'auto' }} onClick={announcements.length > 1 ? handleTap : undefined}>
+            <div
+              className={combinedStyles}
+              style={{ minHeight: maxHeight > 0 ? maxHeight : 'auto' }}
+              onClick={announcements.length > 1 ? handleTap : undefined}
+            >
               <h3 className={titleStyles}>{announcement.title}</h3>
               <div className='flex-1 mt-2' dangerouslySetInnerHTML={{ __html: announcement.content }} />
               {isPaused && announcements.length > 1 && (

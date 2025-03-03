@@ -6,6 +6,7 @@ import LocationMap from './LocationMap';
 import Button from '@/components/Button';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
+import Announcement from '@/components/Announcement';
 
 // Type Definitions
 interface Location {
@@ -23,7 +24,7 @@ const LocationsPage = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [isZoomed, setIsZoomed] = useState<boolean>(false); // Track zoom state
+  const [isZoomed, setIsZoomed] = useState<boolean>(false);
   const mapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -111,60 +112,64 @@ const LocationsPage = () => {
       {/* Navbar */}
       <NavBar currentPage='locations' />
 
-      {/* Header */}
-      <header className="p-4 w-full bg-background-secondary">
-        <div className="container max-w-screen-xl mx-auto text-center">
+      {/* Global Page Wrapper */}
+      <div className="w-full max-w-screen-xl mx-auto px-4">
+        
+        {/* Header */}
+        <header className="p-4 text-center">
           <h1 className="text-2xl font-bold text-[var(--card-title)]">Our Locations</h1>
           <p>With 10 locations around the Portland metro area, JayMar Darts offers convenient spots for you to join the excitement of dart games, leagues, and tournaments. Click on a location to explore more!</p>
-        </div>
-      </header>
+        </header>
 
-      {/* Google Map */}
-      <section className="p-4 w-full" ref={mapRef}>
-        <div className="container max-w-screen-xl mx-auto">
+        {/* Announcement Section */}
+        <section className="w-full p-4">
+          <Announcement page="locations" autoplayDelay={6000} hideIfNone />
+        </section>
+
+        {/* Google Map */}
+        <section className="p-4" ref={mapRef}>
           <LocationMap locations={locations} selectedLocation={selectedLocation} />
-        </div>
-      </section>
+        </section>
 
-{/* Buttons Below Map */}
-<section className="p-4 w-full flex justify-center">
-  <div className="flex flex-row justify-center gap-4 flex-nowrap">
-    <Button 
-      onClick={findClosestLocation} 
-      iconPosition="left" 
-      className="w-auto px-4 min-w-[160px] whitespace-nowrap"
-    >
-      Find Closest Location
-    </Button>
+        {/* Buttons Below Map */}
+        <section className="p-4 flex justify-center">
+          <div className="flex flex-row justify-center gap-4">
+            <Button 
+              onClick={findClosestLocation} 
+              iconPosition="left" 
+              className="w-auto px-4 min-w-[160px] whitespace-nowrap"
+            >
+              Find Closest Location
+            </Button>
 
-    {isZoomed && (
-      <Button 
-        onClick={showAllLocations} 
-        iconPosition="left" 
-        className="w-auto px-4 min-w-[160px] whitespace-nowrap"
-      >
-        Show All Locations
-      </Button>
-    )}
-  </div>
-</section>
+            {isZoomed && (
+              <Button 
+                onClick={showAllLocations} 
+                iconPosition="left" 
+                className="w-auto px-4 min-w-[160px] whitespace-nowrap"
+              >
+                Show All Locations
+              </Button>
+            )}
+          </div>
+        </section>
 
-      {/* Loading / Error Message */}
-      {isLoading && <p className="p-4 text-center text-gray-500">Loading locations...</p>}
-      {error && <p className="p-4 text-center text-red-500">Error: {error}</p>}
+        {/* Loading / Error Message */}
+        {isLoading && <p className="p-4 text-center text-gray-500">Loading locations...</p>}
+        {error && <p className="p-4 text-center text-red-500">Error: {error}</p>}
 
-      {/* Location Cards */}
-      {!isLoading && !error && (
-        <section className="p-4 w-full">
-          <div className="container max-w-screen-xl mx-auto">
+        {/* Location Cards */}
+        {!isLoading && !error && (
+          <section className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {locations.map((location) => (
                 <LocationCard key={location.id} location={location} onClick={() => handleLocationClick(location)} />
               ))}
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
+
+      </div> {/* End of Global Wrapper */}
 
       {/* Footer */}
       <Footer />
