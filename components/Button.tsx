@@ -17,7 +17,7 @@ interface ButtonProps {
 const baseStyles =
   'py-2 px-4 rounded-md transition-colors duration-300 flex items-center justify-center bg-[var(--button-background)] text-[var(--button-text)]';
 const hoverStyles = 'hover:opacity-70';
-const disabledStyles = 'opacity-50 cursor-not-allowed';
+const disabledStyles = 'opacity-20 cursor-not-allowed';
 
 // Button component
 const Button: React.FC<ButtonProps> = ({
