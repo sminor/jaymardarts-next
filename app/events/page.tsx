@@ -94,63 +94,64 @@ const EventsPage = () => {
 
         {/* Placeholder Buttons Section */}
         <section className="p-4 flex justify-center">
-          <div className="grid grid-cols-3 gap-4">
-            <Button className="min-w-[120px]">New Players</Button>
-            <Button className="min-w-[120px]">Conduct Code</Button>
-            <Button className="min-w-[120px]">FAQ</Button>
+          <div className="w-full max-w-sm md:max-w-md lg:max-w-lg grid grid-cols-3 gap-4">
+            <Button className="w-full whitespace-nowrap">New Players</Button>
+            <Button className="w-full whitespace-nowrap">Conduct Code</Button>
+            <Button className="w-full whitespace-nowrap">FAQ</Button>
           </div>
         </section>
 
-        {/* Filters Section */}
-        <section className="p-4">
-          <div className="flex flex-wrap justify-between items-end p-4 rounded-lg">
-            
-            {/* Left side: Date and Location Filters */}
-            <div className="flex flex-col gap-2">
-              {/* Date Range Filter */}
-              <select
-                onChange={(e) => setDateRange(e.target.value)}
-                value={dateRange}
-                className="bg-[var(--select-background)] text-[var(--select-text)] border-2 border-[var(--select-border)] rounded-md px-2 py-1 focus:outline-none"
-              >
-                <option value="thisMonth">This Month</option>
-                <option value="thisWeek">This Week</option>
-                <option value="today">Today</option>
-                <option value="all">All Events</option>
-              </select>
+{/* Filters Section */}
+<section className="p-4">
+  <div className="w-full max-w-screen-xl mx-auto flex justify-between items-end">
+    
+    {/* Left: Date Range & Location Filters (stacked & equal width) */}
+    <div className="flex flex-col w-auto">
+      <div className="w-full max-w-[200px]">
+        <select
+          onChange={(e) => setDateRange(e.target.value)}
+          value={dateRange}
+          className="bg-[var(--select-background)] text-[var(--select-text)] border-2 border-[var(--select-border)] rounded-md px-2 py-1 focus:outline-none w-full max-w-[200px]"
+        >
+          <option value="thisMonth">This Month</option>
+          <option value="thisWeek">This Week</option>
+          <option value="today">Today</option>
+          <option value="all">All Events</option>
+        </select>
+      </div>
 
-              {/* Location Filter */}
-              <select
-                onChange={(e) => setLocationFilter(e.target.value)}
-                value={locationFilter}
-                className="bg-[var(--select-background)] text-[var(--select-text)] border-2 border-[var(--select-border)] rounded-md px-2 py-1 focus:outline-none"
-              >
-                {uniqueLocations.map(location => (
-                  <option key={location} value={location}>
-                    {location === 'all' ? 'All Locations' : location}
-                  </option>
-                ))}
-              </select>
-            </div>
+      <div className="w-full max-w-[200px] mt-2">
+        <select
+          onChange={(e) => setLocationFilter(e.target.value)}
+          value={locationFilter}
+          className="bg-[var(--select-background)] text-[var(--select-text)] border-2 border-[var(--select-border)] rounded-md px-2 py-1 focus:outline-none w-full max-w-[200px]"
+        >
+          {uniqueLocations.map(location => (
+            <option key={location} value={location}>
+              {location === 'all' ? 'All Locations' : location}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
 
-            {/* Right side: Past Events Checkbox */}
-            <div className="flex items-end">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="showPastEvents"
-                  checked={showPastEvents}
-                  onChange={() => setShowPastEvents(!showPastEvents)}
-                  className="appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-md checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
-                />
-                <label htmlFor="showPastEvents" className="ml-2 text-[var(--select-text)] cursor-pointer">
-                  Show Past Events
-                </label>
-              </div>
-            </div>
+    {/* Right: Past Events Checkbox (Now in the same row as bottom select box, aligned right) */}
+    <div className="flex items-center">
+      <input
+        type="checkbox"
+        id="showPastEvents"
+        checked={showPastEvents}
+        onChange={() => setShowPastEvents(!showPastEvents)}
+        className="appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-md checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
+      />
+      <label htmlFor="showPastEvents" className="ml-2 text-[var(--select-text)] cursor-pointer">
+        Past Events
+      </label>
+    </div>
 
-          </div>
-        </section>
+  </div>
+</section>
+
 
         {/* Event Cards Section */}
         <section className="p-4">

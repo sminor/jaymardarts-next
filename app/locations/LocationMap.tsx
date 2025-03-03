@@ -133,6 +133,7 @@ const LocationsMap: React.FC<LocationsMapProps> = ({ locations, selectedLocation
                 <span>Get Directions</span>
               </a>
               {photoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={photoUrl}
                   alt={infoWindowData.name}
