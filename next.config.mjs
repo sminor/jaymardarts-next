@@ -1,7 +1,6 @@
-import type { NextConfig } from 'next';
-
-const nextConfig: NextConfig = {
+const nextConfig = {
   images: {
+    domains: ['maps.googleapis.com', 'lh3.googleusercontent.com'],
     remotePatterns: [
       {
         protocol: 'https',
@@ -12,4 +11,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-
