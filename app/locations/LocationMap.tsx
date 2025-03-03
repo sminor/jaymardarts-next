@@ -1,6 +1,5 @@
 'use client';
 import React, { useRef, useEffect, useState } from 'react';
-import Image from 'next/image';
 import { GoogleMap, LoadScript, MarkerF, InfoWindowF } from '@react-google-maps/api';
 
 // Constants
@@ -134,11 +133,11 @@ const LocationsMap: React.FC<LocationsMapProps> = ({ locations, selectedLocation
                 <span>Get Directions</span>
               </a>
               {photoUrl && (
-                <Image
+                <img
                   src={photoUrl}
                   alt={infoWindowData.name}
-                  width={300}
-                  height={200}
+                  width="300"
+                  height="200"
                   className="rounded-md shadow-md w-full max-w-[300px] h-auto object-contain mb-2"
                 />
               )}
