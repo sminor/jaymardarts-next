@@ -92,11 +92,11 @@ const EventsFAQ = () => {
             answer: (
                 <>
                 <ul>
-                    <li>{`A/B Draw: Players are split into two skill groups, with one player from each group forming a team.`}</li>
-                    <li>{`Blind Draw: Players are randomly paired with a partner.`}</li>
-                    <li>{`Low Player Pick: Lower-rated players get to choose their partners.`}</li>
-                    <li>{`Ladies Pick: Ladies have the opportunity to select their partners.`}</li>
-                    <li>{`Partner Brings: You bring your own partner, subject to any rating caps for the event.`}</li>
+                    <li><strong>A/B Draw:</strong>{` Players are split into two skill groups, with one player from each group forming a team.`}</li>
+                    <li><strong>Blind Draw:</strong>{` Players are randomly paired with a partner.`}</li>
+                    <li><strong>Low Player Pick:</strong>{` Lower-rated players get to choose their partners.`}</li>
+                    <li><strong>Ladies Pick:</strong>{` Ladies have the opportunity to select their partners.`}</li>
+                    <li><strong>Partner Brings:</strong>{` You bring your own partner, subject to any rating caps for the event.`}</li>
                 </ul>
                 </>
             )
@@ -107,8 +107,8 @@ const EventsFAQ = () => {
             answer: (
                 <>
                 <ul>
-                    <li>{`Cricket: A strategy game focusing on hitting specific numbers (15-20 and the bullseye) to score points.`}</li>
-                    <li>{`x01 Games (e.g., 301, 501): Players start with a set score (e.g., 301 or 501) and work down to zero. In soft-tip tournaments, you typically do not need to double out. If a specific event requires a double or "master out," this will be noted in the event details.`}</li>
+                    <li><strong>Cricket:</strong>{` A strategy game focusing on hitting specific numbers (15-20 and the bullseye) to score points.`}</li>
+                    <li><strong>x01 Games (e.g., 301, 501):</strong>{` Players start with a set score (e.g., 301 or 501) and work down to zero. In soft-tip tournaments, you typically do not need to double out. If a specific event requires a double or "master out," this will be noted in the event details.`}</li>
                 </ul>
                 </>
             )
