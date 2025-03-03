@@ -15,7 +15,7 @@ interface TOCModalProps {
 }
 
 const TOCModal: React.FC<TOCModalProps> = ({ items, scrollContainerRef }) => {
-    const [currentTOCIndex, setCurrentTOCIndex] = useState<number>(0);
+    const [currentTOCIndex, setCurrentTOCIndex] = useState<number | null>(null);
     const tocRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
     useEffect(() => {
