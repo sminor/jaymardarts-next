@@ -6,6 +6,8 @@ import EventCard from './EventCard';
 import Button from '@/components/Button';
 import Footer from '@/components/Footer';
 import Announcement from '@/components/Announcement';
+import Modal from '@/components/Modal';
+import EventFAQ from '@/app/events/EventFAQ'; // ✅ Import the FAQ content
 
 // Type Definitions
 interface Event {
@@ -29,6 +31,14 @@ const EventsPage = () => {
   const [showPastEvents, setShowPastEvents] = useState<boolean>(false);
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [uniqueLocations, setUniqueLocations] = useState<string[]>(['all']);
+  const [isModalOpen, setIsModalOpen] = useState(false); // ✅ Add this line
+  const [modalContent, setModalContent] = useState<React.ReactNode>(null);
+
+  // Function to open the FAQ modal
+  const openFAQModal = () => {
+    setModalContent(<EventFAQ />); // ✅ Set modal content dynamically
+    setIsModalOpen(true);
+  };
 
   // Fetch Events from Supabase
   useEffect(() => {
@@ -97,7 +107,11 @@ const EventsPage = () => {
           <div className="w-full max-w-sm md:max-w-md lg:max-w-lg grid grid-cols-3 gap-4">
             <Button className="w-full whitespace-nowrap">New Players</Button>
             <Button className="w-full whitespace-nowrap">Conduct Code</Button>
-            <Button className="w-full whitespace-nowrap">FAQ</Button>
+            <Button className="w-full whitespace-nowrap" onClick={openFAQModal}>FAQ</Button>
+
+            
+            {/* Modal Component with dynamic content */}
+              <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} content={modalContent} />
           </div>
         </section>
 

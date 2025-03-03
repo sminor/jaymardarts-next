@@ -64,6 +64,11 @@
   /* Checkbox Colors */
   --checkbox-checkmark: var(--color7);
 
+  /* Modal Colors */
+  --modal-background: var(--color1);
+  --modal-close-text: var(--color7);
+  --modal-close-background: var(--color2);
+
 }
 
 
@@ -117,4 +122,29 @@ body {
   background-color: var(--color7); /* Set the color of the active pagination dot */
   opacity: 1; /* Set the opacity of the active pagination dot */
 }
+
+/* General modal content styling */
+.modal-content p {
+  margin-bottom: 1em; /* Ensure spacing between paragraphs */
+}
+
+.modal-content ul {
+  list-style-type: disc; /* Ensure bullet points */
+  margin-left: 20px; /* Indentation */
+  margin-bottom: 1em; /* Space after lists */
+}
+
+.modal-content li {
+  margin-bottom: 0.5em; /* Ensure spacing between list items */
+}
+
+.modal-content a {
+    color: var(--text-link); /* Link color */
+    text-decoration: underline; /* Underline for links */
+}
+
+.modal-content a:hover {
+  color: var(--text-highlight); /* Hover color */
+}
+
 

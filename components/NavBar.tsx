@@ -19,7 +19,7 @@ const NavBar: React.FC<NavBarProps> = ({ currentPage }) => {
 
   return (
     <nav className="bg-[var(--background-navbar)] w-full p-2">
-      <div className="container max-w-screen-xl mx-auto flex justify-center gap-2 px-2">
+      <div className="container max-w-screen-xl mx-auto flex justify-center gap-2 px-0">
         {navLinks
           .filter(({ label }) => label.toLowerCase() !== currentPage.toLowerCase()) // ✅ Hide current page
           .map(({ href, label, icon: Icon }) => (
