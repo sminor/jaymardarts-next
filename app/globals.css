@@ -14,6 +14,8 @@
   --color5: #CE5B45;
   --color6: #6FA2C8;
   --color7: #C99F40;
+  --color8: #666666;
+  --color9: #999999;
   
 
   /* Background Colors */
@@ -46,7 +48,25 @@
   --card-new: var(--color5);
   --card-today: var(--color6);
   --card-special: var(--color5);
+  
+  --card-past-background: var(--color3) ;
+  --card-past-text: var(--color8); ;
+  --card-past-title: var(--color8); ;
+  --card-past-highlight: var(--color8); ;
+  --card-past-badge: var(--color8); ;
+
+  /* Select Box Colors */
+  --select-background: var(--color3);         /* Background */
+  --select-text: var(--color4);               /* Text */
+  --select-border: var(--color7);             /* Border */
+  --select-focus-outline: var(--color4);      /* Outline when focused */
+
+  /* Checkbox Colors */
+  --checkbox-checkmark: var(--color7);
+
 }
+
+
 
 body {
   color: var(--text-main);

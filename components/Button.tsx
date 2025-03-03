@@ -15,10 +15,9 @@ interface ButtonProps {
 
 // Static styles
 const baseStyles =
-  'py-2 px-4 rounded-md transition-colors duration-300 flex items-center justify-center w-full transition-opacity bg-[var(--button-background)] text-[var(--button-text)]';
+  'py-2 px-4 rounded-md transition-colors duration-300 flex items-center justify-center w-full bg-[var(--button-background)] text-[var(--button-text)]';
 const hoverStyles = 'hover:opacity-70';
 const disabledStyles = 'opacity-50 cursor-not-allowed';
-const focusStyles = 'focus:outline-none focus:ring-2 focus:ring-offset-2';
 
 // Button component
 const Button: React.FC<ButtonProps> = ({
@@ -51,7 +50,7 @@ const Button: React.FC<ButtonProps> = ({
   const contentStyles = isIconOnly ? 'flex items-center justify-center' : `flex ${flexDirection} items-center gap-2`;
 
   // Combine styles based on conditions
-  const combinedStyles = `${baseStyles} ${!disabled ? hoverStyles : ''} ${disabled ? disabledStyles : ''} ${focusStyles} ${className || ''}`;
+  const combinedStyles = `${baseStyles} ${!disabled ? hoverStyles : ''} ${disabled ? disabledStyles : ''} ${className || ''}`;
 
   // Button content structure
   const ButtonContent = (
