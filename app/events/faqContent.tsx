@@ -1,8 +1,8 @@
 /* eslint-disable react/no-unescaped-entities */
 import React from 'react';
-import { TOCItem } from '@/components/ModalTOC';
+import { TableOfContentsItem } from '@/components/TableOfContentsModal';
 
-export const faqs: TOCItem[] = [
+export const faqs: TableOfContentsItem[] = [
     {
         id: "signup-times",
         title: "What are the sign-up times?",

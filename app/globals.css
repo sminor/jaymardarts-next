@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin '@tailwindcss/typography';
 
 @theme {
   --font-sans: var(--font-geist-sans);
@@ -13,7 +14,7 @@
   --color4: #F2F2F2;
   --color5: #CE5B45;
   --color6: #6FA2C8;
-  --color7: #C99F40;
+  --color7: #C68E38;
   --color8: #666666;
   --color9: #999999;
   
@@ -56,10 +57,10 @@
   --card-past-badge: var(--color8); ;
 
   /* Select Box Colors */
-  --select-background: var(--color3);         /* Background */
-  --select-text: var(--color4);               /* Text */
-  --select-border: var(--color7);             /* Border */
-  --select-focus-outline: var(--color4);      /* Outline when focused */
+  --select-background: var(--color3);         
+  --select-text: var(--color4);               
+  --select-border: var(--color7);             
+  --select-focus-outline: var(--color4);
 
   /* Checkbox Colors */
   --checkbox-checkmark: var(--color7);
@@ -74,36 +75,28 @@
 
 
 body {
-  color: var(--text-main);
-  background: var(--background-main);
+  @apply text-[var(--text-main)] bg-[var(--background-main)];
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Announcement styling */
-.announcement-content p {
-  margin-bottom: 1em;
+.prose {
+  @apply text-[var(--text-main)];
 }
 
-.announcement-content ul {
-  list-style-type: disc; /* Add bullet points */
-  margin-left: 20px; /* Add left margin for list indentation */
-  margin-bottom: 1em;
+.prose a {
+  @apply text-[var(--text-link)] hover:text-[var(--text-highlight)];
 }
 
-.announcement-content li {
-  margin-bottom: 0.5em;
+.prose li::marker {
+  @apply text-[var(--text-main)];
 }
 
-.announcement-content a {
-    color: var(--text-link); /* Link Color */
-    text-decoration: underline; /* Underline */
-}
-.announcement-content a:hover{
-  color: var(--text-highlight); /* Hover color*/
+.prose strong {
+  @apply text-[var(--text-main)];
 }
 
-.announcement-swiper {
-  padding-bottom: 3rem; /* Increased padding-bottom for extra space */
+.prose hr {
+  @apply border-[var(--text-highlight)];
 }
 
 /* Pagination Container Styles */
@@ -123,28 +116,5 @@ body {
   opacity: 1; /* Set the opacity of the active pagination dot */
 }
 
-/* General modal content styling */
-.modal-content p {
-  margin-bottom: 1em; /* Ensure spacing between paragraphs */
-}
-
-.modal-content ul {
-  list-style-type: disc; /* Ensure bullet points */
-  margin-left: 20px; /* Indentation */
-  margin-bottom: 1em; /* Space after lists */
-}
-
-.modal-content li {
-  margin-bottom: 0.5em; /* Ensure spacing between list items */
-}
-
-.modal-content a {
-    color: var(--text-link); /* Link color */
-    text-decoration: underline; /* Underline for links */
-}
-
-.modal-content a:hover {
-  color: var(--text-highlight); /* Hover color */
-}
 
 

@@ -7,8 +7,11 @@ import Button from '@/components/Button';
 import Footer from '@/components/Footer';
 import Announcement from '@/components/Announcement';
 import Modal from '@/components/Modal';
-import ModalTOC from '@/components/ModalTOC';
+import TableOfContentsModal from '@/components/TableOfContentsModal';
+import InfoModal from '@/components/InfoModal';
 import { faqs } from './faqContent';
+import { newPlayerInfo } from './newPlayerContent';
+import { codeOfConductInfo } from './codeOfConductContent';
 
 // Type Definitions
 interface Event {
@@ -32,13 +35,10 @@ const EventsPage = () => {
     const [showPastEvents, setShowPastEvents] = useState<boolean>(false);
     const [locationFilter, setLocationFilter] = useState<string>('all');
     const [uniqueLocations, setUniqueLocations] = useState<string[]>(['all']);
-    const [isModalOpen, setIsModalOpen] = useState(false); // Modal open/close state
-    const tocModalRef = useRef<HTMLDivElement>(null) as React.MutableRefObject<HTMLDivElement>;
-
-    // Function to open the FAQ modal
-    const openFAQModal = () => {
-        setIsModalOpen(true);
-    };
+    const [isFAQModalOpen, setIsFAQModalOpen] = useState(false);
+    const [isNewPlayerModalOpen, setIsNewPlayerModalOpen] = useState(false);
+    const [isCodeOfConductModalOpen, setIsCodeOfConductModalOpen] = useState(false);
+    const tocModalRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
 
     // Fetch Events from Supabase
     useEffect(() => {
@@ -105,26 +105,42 @@ const EventsPage = () => {
                 {/* Buttons Section */}
                 <section className="p-4 flex justify-center">
                     <div className="w-full max-w-sm md:max-w-md lg:max-w-lg grid grid-cols-3 gap-4">
-                        <Button className="w-full whitespace-nowrap">New Players</Button>
-                        <Button className="w-full whitespace-nowrap">Conduct Code</Button>
-                        <Button className="w-full whitespace-nowrap" onClick={openFAQModal}>FAQ</Button>
+                        <Button className="w-full whitespace-nowrap" onClick={() => setIsNewPlayerModalOpen(true)}>New Players</Button>
+                        <Button className="w-full whitespace-nowrap" onClick={() => setIsCodeOfConductModalOpen(true)}>Conduct Code</Button>
+                        <Button className="w-full whitespace-nowrap" onClick={() => setIsFAQModalOpen(true)}>FAQ</Button>
 
                     </div>
                 </section>
 
+                {/* Modal Component with New Player Content */}
+                <Modal
+                  isOpen={isNewPlayerModalOpen}
+                  onClose={() => setIsNewPlayerModalOpen(false)}
+                  title="New Player Information"
+                  content={<InfoModal items={newPlayerInfo} />}
+                />
+
+                {/* Modal Component with Code of Conduct Content */}
+                <Modal
+                  isOpen={isCodeOfConductModalOpen}
+                  onClose={() => setIsCodeOfConductModalOpen(false)}
+                  title="Code of Conduct"
+                  content={<InfoModal items={codeOfConductInfo} />}
+                />                 
+
                 {/* Modal Component with FAQ Content */}
                 <Modal
-                    isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
+                    isOpen={isFAQModalOpen}
+                    onClose={() => setIsFAQModalOpen(false)}
                     title="Event FAQs"
-                    content={<ModalTOC items={faqs} scrollContainerRef={tocModalRef} />}
+                    content={<TableOfContentsModal items={faqs} scrollContainerRef={tocModalRef} />}
                 />
 
                 {/* Filters Section */}
                 <section className="p-4">
                     <div className="w-full max-w-screen-xl mx-auto flex justify-between items-end">
 
-                        {/* Left: Date Range & Location Filters (stacked & equal width) */}
+                        {/* Left: Date Range & Location Filters */}
                         <div className="flex flex-col w-auto">
                             <div className="w-full max-w-[200px]">
                                 <select

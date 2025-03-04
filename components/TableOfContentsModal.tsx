@@ -1,16 +1,15 @@
-// components/ModalTOC.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import Button from '@/components/Button';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 
-export interface TOCItem {
+export interface TableOfContentsItem {
     id: string;
     title: string;
     content: React.ReactNode;
 }
 
 interface TOCModalProps {
-    items: TOCItem[];
+    items: TableOfContentsItem[];
     scrollContainerRef: React.RefObject<HTMLDivElement>;
 }
 
@@ -36,14 +35,14 @@ const TOCModal: React.FC<TOCModalProps> = ({ items, scrollContainerRef }) => {
     }, [currentTOCIndex]);
 
     return (
-        <div ref={scrollContainerRef} className="p-4 max-h-[80vh] overflow-y-auto">
-
-            <div className="mb-4">
+        <div ref={scrollContainerRef}>
+            {/* Table of Contents */}
+            <div>
                 <ul>
                     {items.map((toc, index) => (
                         <li key={toc.id}>
                             <button
-                                className={`text-left text-[var(--text-link)] ${currentTOCIndex === index ? "font-bold underline" : ""}`}
+                                className={`text-[var(--text-link)] ${currentTOCIndex === index ? "font-bold underline" : ""}`}
                                 onClick={() => setCurrentTOCIndex(index)}
                             >
                                 {toc.title}
@@ -53,13 +52,17 @@ const TOCModal: React.FC<TOCModalProps> = ({ items, scrollContainerRef }) => {
                 </ul>
             </div>
 
+            {/* Display selected TOC item */}
             {currentTOCIndex !== null && (
-                <div key={items[currentTOCIndex].id} ref={(el) => { tocRefs.current[items[currentTOCIndex].id] = el || null; }} className="mb-4">
-                    <h3 id={items[currentTOCIndex].id} tabIndex={-1} className="text-lg font-medium underline mb-2">{items[currentTOCIndex].title}</h3>
+                <><hr />
+                <div key={items[currentTOCIndex].id} ref={(el) => { tocRefs.current[items[currentTOCIndex].id] = el || null; }}>
+                    <h3 id={items[currentTOCIndex].id} tabIndex={-1}>{items[currentTOCIndex].title}</h3>
                     <div>{items[currentTOCIndex].content}</div>
                 </div>
+                </>
             )}
 
+            {/* Navigation Buttons */}
             {currentTOCIndex !== null && (
                 <div className="flex justify-center gap-4 mt-4">
                     <Button

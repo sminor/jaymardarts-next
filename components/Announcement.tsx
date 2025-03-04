@@ -9,7 +9,7 @@ import { supabase } from '@/utils/supabaseClient';
 import { Swiper as SwiperClass } from 'swiper';
 
 // Static styles
-const baseStyles = 'p-4 flex rounded-lg bg-[var(--announcement-background)] announcement-content relative';
+const baseStyles = 'prose prose-invert w-full max-w-none p-4 flex rounded-lg bg-[var(--announcement-background)] announcement-content relative';
 const titleStyles = 'font-bold text-[var(--announcement-title)]';
 const pauseIconStyles = 'absolute top-4 right-4 text-[var(--announcement-paused-text)]';
 

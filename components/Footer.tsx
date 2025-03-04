@@ -19,7 +19,7 @@ const Footer = () => {
               key={index}
               href={href}
               target="_blank"
-              className="flex items-center space-x-1 text-[var(--text-main)] hover:text-[var(--text-highlight)]"
+              className="flex items-center space-x-1 hover:text-[var(--text-highlight)]"
             >
               <Icon size={14} />
               <span>{label}</span>
