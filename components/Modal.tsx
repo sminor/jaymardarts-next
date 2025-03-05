@@ -40,8 +40,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, content, title, classNam
                 className={`relative z-50 w-full max-w-screen-xl ${className} p-6 rounded-lg shadow-xl bg-[var(--modal-background)] bg-opacity-95 mx-4 mt-4 max-h-[90vh] prose prose-invert scrollbar-custom`}
             >
                 {/* Title & Close Button */}
-                <div className="flex items-center justify-between">
-                    {title && <h2 className="mt-0 mb-4 text-[var(--text-highlight)]">{title}</h2>}
+                <div className="flex justify-between">
+                    {title && <h2 className="mt-0 mb-0 text-[var(--text-highlight)]">{title}</h2>}
                     
                     {/* Close Button */}
                     <Button
