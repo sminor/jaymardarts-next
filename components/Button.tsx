@@ -11,11 +11,12 @@ interface ButtonProps {
   type?: 'button' | 'submit' | 'reset';
   iconPosition?: 'top' | 'left' | 'right' | 'bottom';
   className?: string;
+  ariaLabel?: string;
 }
 
 // Static styles
 const baseStyles =
-  'py-2 px-4 rounded-md transition-colors duration-300 flex items-center justify-center bg-[var(--button-background)] text-[var(--button-text)]';
+  'py-2 px-4 rounded-md transition-colors duration-300 flex items-center justify-center bg-[var(--button-background)] text-[var(--button-text)] whitespace-nowrap';
 const hoverStyles = 'hover:opacity-70';
 const disabledStyles = 'opacity-20 cursor-not-allowed';
 
@@ -29,6 +30,7 @@ const Button: React.FC<ButtonProps> = ({
   type = 'button',
   iconPosition = 'top',
   className = '',
+  ariaLabel,
 }) => {
   // Determine flex direction based on icon position
   let flexDirection = 'flex-col';
@@ -45,30 +47,29 @@ const Button: React.FC<ButtonProps> = ({
       break;
   }
 
-  const isIconOnly = !children;
-  const contentStyles = isIconOnly ? 'flex items-center justify-center' : `flex ${flexDirection} items-center gap-2`;
+  const contentStyles = `flex ${flexDirection} items-center gap-2 justify-center`;
 
   // Ensure w-full is only applied when no width is manually set
   const combinedStyles = `${baseStyles} ${!disabled ? hoverStyles : ''} ${disabled ? disabledStyles : ''} ${className.includes('w-') ? '' : 'w-full'} ${className}`;
 
   // Button content structure
   const ButtonContent = (
-    <div className={contentStyles}>
-      {icon && <span>{icon}</span>}
+    <div className={`${contentStyles} flex items-center justify-center`}>
+        {icon && <span className="flex items-center justify-center">{icon}</span>}
       {children && <span>{children}</span>}
     </div>
   );
 
   if (href && !disabled) {
     return (
-      <Link href={href} className={combinedStyles}>
+      <Link href={href} className={combinedStyles} aria-label={ariaLabel}>
         {ButtonContent}
       </Link>
     );
   }
 
   return (
-    <button onClick={onClick} className={combinedStyles} disabled={disabled} type={type}>
+    <button onClick={onClick} className={combinedStyles} disabled={disabled} type={type} aria-label={ariaLabel}>
       {ButtonContent}
     </button>
   );

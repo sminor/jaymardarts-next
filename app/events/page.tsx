@@ -12,6 +12,7 @@ import InfoModal from '@/components/InfoModal';
 import { faqs } from './faqContent';
 import { newPlayerInfo } from './newPlayerContent';
 import { codeOfConductInfo } from './codeOfConductContent';
+import { FaQuestionCircle, FaUserPlus, FaBook } from 'react-icons/fa'; // Import icons
 
 // Type Definitions
 interface Event {
@@ -114,10 +115,15 @@ const EventsPage = () => {
                 {/* Buttons Section */}
                 <section className="p-4 flex justify-center">
                     <div className="w-full max-w-sm md:max-w-md lg:max-w-lg grid grid-cols-3 gap-4">
-                        <Button className="w-full whitespace-nowrap" onClick={() => setIsNewPlayerModalOpen(true)}>New Players</Button>
-                        <Button className="w-full whitespace-nowrap" onClick={() => setIsCodeOfConductModalOpen(true)}>Conduct Code</Button>
-                        <Button className="w-full whitespace-nowrap" onClick={() => setIsFAQModalOpen(true)}>FAQ</Button>
-
+                        <div className='flex-1'>
+                            <Button className="w-full" icon={<FaUserPlus size={32} aria-hidden="true" />} onClick={() => setIsNewPlayerModalOpen(true)}>New Players</Button>
+                        </div>
+                        <div className='flex-1'>
+                            <Button className="w-full" icon={<FaBook size={32} aria-hidden="true" />} onClick={() => setIsCodeOfConductModalOpen(true)}>Conduct Code</Button>
+                        </div>
+                        <div className='flex-1'>
+                            <Button className="w-full" icon={<FaQuestionCircle size={32} aria-hidden="true" />} onClick={() => setIsFAQModalOpen(true)}>FAQ</Button>
+                        </div>
                     </div>
                 </section>
 
