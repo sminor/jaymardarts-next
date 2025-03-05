@@ -69,6 +69,7 @@
   --modal-background: var(--color1);
   --modal-close-text: var(--color7);
   --modal-close-background: var(--color2);
+  --modal-scrollbar-color: var(--color3);
 
 }
 
@@ -114,6 +115,26 @@ body {
 .announcement-swiper .swiper-pagination-bullet-active {
   background-color: var(--color7); /* Set the color of the active pagination dot */
   opacity: 1; /* Set the opacity of the active pagination dot */
+}
+
+/* Custom Scrollbar for WebKit Browsers */
+.scrollbar-custom::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-custom::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background: var(--modal-scrollbar-color);
+  border-radius: 10px;
+}
+
+/* Custom Scrollbar for Non-WebKit Browsers */
+.scrollbar-custom {
+  scrollbar-width: thin;
+  scrollbar-color: var(--modal-scrollbar-color) transparent;
 }
 
 

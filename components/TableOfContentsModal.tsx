@@ -42,7 +42,7 @@ const TOCModal: React.FC<TOCModalProps> = ({ items, scrollContainerRef }) => {
                     {items.map((toc, index) => (
                         <li key={toc.id}>
                             <button
-                                className={`text-[var(--text-link)] ${currentTOCIndex === index ? "font-bold underline" : ""}`}
+                                className={`text-[var(--text-link)] text-left ${currentTOCIndex === index ? "font-bold underline" : ""}`}
                                 onClick={() => setCurrentTOCIndex(index)}
                             >
                                 {toc.title}

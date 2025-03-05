@@ -47,9 +47,16 @@ const EventsPage = () => {
             setError(null);
 
             try {
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                //Start of previous month
+                const startOfPreviousMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                
                 const { data, error } = await supabase
                     .from('events')
                     .select('*')
+                    //Filter out old events
+                    .gte('date', startOfPreviousMonth.toISOString().split('T')[0]) // greater than or equal to start of previous month
                     .order('date', { ascending: true });
 
                 if (error) throw error;
@@ -73,10 +80,12 @@ const EventsPage = () => {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const eventDate = new Date(event.date + 'T00:00:00');
-        const isPastEvent = eventDate < today;
+        const startOfPreviousMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const isPastEvent = eventDate < today && eventDate >= startOfPreviousMonth; //Only show events in the past month.
 
         if (!showPastEvents && isPastEvent) return false;
         if (locationFilter !== 'all' && event.location !== locationFilter) return false;
+        if (dateRange === 'all') return true;
         if (dateRange === 'thisMonth') return eventDate.getMonth() === today.getMonth() && eventDate.getFullYear() === today.getFullYear();
         if (dateRange === 'thisWeek') return eventDate >= today && eventDate <= new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7);
         if (dateRange === 'today') return eventDate.toDateString() === today.toDateString();
@@ -190,6 +199,7 @@ const EventsPage = () => {
 
                 {/* Event Cards Section */}
                 <section className="p-4">
+                    {error && <p className="p-4 text-center text-red-500">Error: {error}</p>}
                     {!isLoading && !error && filteredEvents.length === 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <p className="text-left text-[var(--card-text)]">No events found for the selected criteria.</p>

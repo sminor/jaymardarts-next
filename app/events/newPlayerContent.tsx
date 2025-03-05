@@ -1,6 +1,38 @@
 /* eslint-disable react/no-unescaped-entities */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { InfoItem } from '@/components/InfoModal';
+
+const ClientSideLink: React.FC = () => {
+    const [isClient, setIsClient] = useState(false);
+    const [isAndroid, setIsAndroid] = useState(false);
+    const [isIOS, setIsIOS] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+        if (typeof window !== 'undefined') {
+            const userAgent = navigator.userAgent;
+            setIsAndroid(/android/i.test(userAgent));
+            setIsIOS(/iPad|iPhone|iPod/.test(userAgent));
+        }
+    }, []); // Empty dependency array to run once on mount
+
+    return (
+        <>
+            {isClient && // Only render this part if we are on the client side
+                (isAndroid ? (
+                    <a href="https://play.google.com/store/apps/details?id=com.arachnid.bslive" target="_blank" rel="noopener noreferrer" className="text-[var(--text-link)]">
+                        Google Play Store
+                    </a>
+                ) : isIOS ? (
+                    <a href="https://apps.apple.com/us/app/bullshooter-live/id717480327" target="_blank" rel="noopener noreferrer" className="text-[var(--text-link)]">
+                        Apple App Store
+                    </a>
+                ) : (
+                    <span>Apple App Store or Google Play Store.</span>
+                ))}
+        </>
+    )
+};
 
 export const newPlayerInfo: InfoItem[] = [
     {
@@ -18,7 +50,8 @@ export const newPlayerInfo: InfoItem[] = [
 
                 <h3>Get the Bullshooter Live App:</h3>
                 <p>
-                    Before you arrive, make sure to download the Bullshooter Live app from the Apple App Store or Google Play Store. Once you've got it, sign up for an account—it'll make things much easier on game day!
+                    Before you arrive, make sure to download the Bullshooter Live app from the{' '}
+                    <ClientSideLink />. Once you've got it, sign up for an account—it'll make things much easier on game day!
                 </p>
 
                 <h3>Bring Your Darts (or Use Ours!):</h3>
