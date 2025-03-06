@@ -71,29 +71,31 @@ const NDA_FEE = 10;
 const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) => {
     const [locations, setLocations] = useState<Location[]>([]);
     const [leagues, setLeagues] = useState<League[]>([]);
-    const [selectedLeague, setSelectedLeague] = useState<string>('');
-    const [selectedPreference, setSelectedPreference] = useState<string>('');
+    const [formData, setFormData] = useState<SignupFormData>({
+        team_name: '',
+        captain_name: '',
+        captain_adl_number: '',
+        captain_email: '',
+        captain_phone_number: '',
+        captain_paid_nda: false,
+        teammate_name: '',
+        teammate_adl_number: '',
+        teammate_email: '',
+        teammate_phone_number: '',
+        teammate_paid_nda: false,
+        league_name: '',
+        home_location_1: '',
+        home_location_2: '',
+        play_preference: '',
+        total_fees_due: 0,
+        captain_league_cost: 0,
+        teammate_league_cost: 0,
+        payment_method: ''
+    });
     const [isTermsChecked, setIsTermsChecked] = useState(false);
-    const [captainHasPaidNDA, setCaptainHasPaidNDA] = useState(false);
-    const [teammateHasPaidNDA, setTeammateHasPaidNDA] = useState(false);
-    const [totalDue, setTotalDue] = useState(0);
-    const [captainLeagueCost, setCaptainLeagueCost] = useState(0);
-    const [teammateLeagueCost, setTeammateLeagueCost] = useState(0);
-    const [captainEmail, setCaptainEmail] = useState('');
-    const [teammateEmail, setTeammateEmail] = useState('');
-    const [captainPhoneNumber, setCaptainPhoneNumber] = useState('');
-    const [teammatePhoneNumber, setTeammatePhoneNumber] = useState('');
+    const [submissionError, setSubmissionError] = useState<string | null>(null);
     const [emailError, setEmailError] = useState('');
     const [phoneError, setPhoneError] = useState('');
-    const [teamName, setTeamName] = useState('');
-    const [captainName, setCaptainName] = useState('');
-    const [captainADLNumber, setCaptainADLNumber] = useState('');
-    const [teammateName, setTeammateName] = useState('');
-    const [teammateADLNumber, setTeammateADLNumber] = useState('');
-    const [homeLocation1, setHomeLocation1] = useState('');
-    const [homeLocation2, setHomeLocation2] = useState('');
-    const [submissionError, setSubmissionError] = useState<string | null>(null);
-    const [paymentPreference, setSelectedPaymentPreference] = useState<string>('');
 
 
     useEffect(() => {
@@ -132,34 +134,52 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
     }, []);
 
     useEffect(() => {
-        if (!selectedLeague) {
-            setTotalDue(0);
-            setCaptainLeagueCost(0);
-            setTeammateLeagueCost(0);
+        if (!formData.league_name) {
+            setFormData((prev) => ({
+                ...prev,
+                total_fees_due: 0,
+                captain_league_cost: 0,
+                teammate_league_cost: 0
+            }));
             return;
         }
-    
-        const league = leagues.find((l) => l.name === selectedLeague);
-        const captainNDAFee = captainHasPaidNDA ? 0 : NDA_FEE;
-        const teammateNDAFee = teammateHasPaidNDA ? 0 : NDA_FEE;
-    
+
+        const league = leagues.find((l) => l.name === formData.league_name);
+        const captainNDAFee = formData.captain_paid_nda ? 0 : NDA_FEE;
+        const teammateNDAFee = formData.teammate_paid_nda ? 0 : NDA_FEE;
+
         if (!league) {
-            setTotalDue(captainNDAFee + teammateNDAFee);
-            setCaptainLeagueCost(0);
-            setTeammateLeagueCost(0);
+            setFormData((prev) => ({
+                ...prev,
+                total_fees_due: captainNDAFee + teammateNDAFee,
+                captain_league_cost: 0,
+                teammate_league_cost: 0
+            }));
             return;
         }
-    
-        setCaptainLeagueCost(league.cost_per_player);
-        setTeammateLeagueCost(league.cost_per_player);
-        setTotalDue(league.cost_per_player * 2 + captainNDAFee + teammateNDAFee);
-    }, [selectedLeague, captainHasPaidNDA, teammateHasPaidNDA, leagues]);
-    
-    
 
-    const handleCaptainEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData((prev) => ({
+            ...prev,
+            captain_league_cost: league.cost_per_player,
+            teammate_league_cost: league.cost_per_player,
+            total_fees_due: league.cost_per_player * 2 + captainNDAFee + teammateNDAFee
+        }));
+    }, [formData.league_name, formData.captain_paid_nda, formData.teammate_paid_nda, leagues]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { id, value, type, checked, name } = e.target as HTMLInputElement;
+        setFormData((prev) => ({
+            ...prev,
+            [type === 'radio' ? name : id]: type === 'checkbox' ? checked : value
+        }));
+    };
+
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'captain_email' | 'teammate_email') => {
         const value = e.target.value;
-        setCaptainEmail(value);
+        setFormData((prev) => ({
+            ...prev,
+            [field]: value
+        }));
         if (value && !isValidEmail(value)) {
             setEmailError('Invalid email format');
         } else {
@@ -167,31 +187,13 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
         }
     };
 
-    const handleTeammateEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        setTeammateEmail(value);
-        if (value && !isValidEmail(value)) {
-            setEmailError('Invalid email format');
-        } else {
-            setEmailError('');
-        }
-    };
-
-    const handleCaptainPhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'captain_phone_number' | 'teammate_phone_number') => {
         const value = e.target.value;
         const formatted = formatPhoneNumber(value);
-        setCaptainPhoneNumber(formatted);
-        if (formatted.length !== 14 && formatted.length !== 10 && formatted.length !== 0) {
-            setPhoneError('Invalid phone number');
-        } else {
-            setPhoneError('');
-        }
-    };
-
-    const handleTeammatePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        const formatted = formatPhoneNumber(value);
-        setTeammatePhoneNumber(formatted);
+        setFormData((prev) => ({
+            ...prev,
+            [field]: formatted
+        }));
         if (formatted.length !== 14 && formatted.length !== 10 && formatted.length !== 0) {
             setPhoneError('Invalid phone number');
         } else {
@@ -209,28 +211,6 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
             return;
         }
 
-        const formData: SignupFormData = {
-            team_name: teamName,
-            captain_name: captainName,
-            captain_adl_number: captainADLNumber,
-            captain_email: captainEmail,
-            captain_phone_number: captainPhoneNumber,
-            captain_paid_nda: captainHasPaidNDA,
-            teammate_name: teammateName,
-            teammate_adl_number: teammateADLNumber,
-            teammate_email: teammateEmail,
-            teammate_phone_number: teammatePhoneNumber,
-            teammate_paid_nda: teammateHasPaidNDA,
-            league_name: selectedLeague,
-            home_location_1: homeLocation1,
-            home_location_2: homeLocation2,
-            play_preference: selectedPreference,
-            total_fees_due: totalDue,
-            captain_league_cost: captainLeagueCost,
-            teammate_league_cost: teammateLeagueCost,
-            payment_method: paymentPreference
-        };
-
         try {
             const { error } = await supabase
                 .from('league_signups')
@@ -246,22 +226,26 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
             closeModal();
 
             // Show success message (user must acknowledge before continuing)
-            alert(`Your signup was successful! You will now be redirected to complete your payment of $${totalDue.toFixed(2)}. Click "OK" to continue.`);
+            alert(`Your signup was successful! You will now be redirected to complete your payment of $${formData.total_fees_due.toFixed(2)}. Click "OK" to continue.`);
             
             // Encode teamName to ensure it is safe for URLs
-            const encodedTeamName = encodeURIComponent(`League Signup: ${teamName}`);
+            const encodedTeamName = encodeURIComponent(`League Signup: ${formData.team_name}`);
 
             // Redirect to payment URL based on selection
-            if (paymentPreference === 'Venmo') {
-                const venmoUrl = `https://venmo.com/jay-phillips-36?txn=pay&amount=${totalDue.toFixed(2)}&note=${encodedTeamName}`;
+            if (formData.payment_method === 'Venmo') {
+                const venmoUrl = `https://venmo.com/jay-phillips-36?txn=pay&amount=${formData.total_fees_due.toFixed(2)}&note=${encodedTeamName}`;
                 window.open(venmoUrl, '_blank');
-            } else if (paymentPreference === 'Paypal') {
-                const paypalUrl = `https://paypal.me/jayphillips1528/${totalDue.toFixed(2)}?currencyCode=USD&note=${encodedTeamName}`;
+            } else if (formData.payment_method === 'Paypal') {
+                const paypalUrl = `https://paypal.me/jayphillips1528/${formData.total_fees_due.toFixed(2)}?currencyCode=USD&note=${encodedTeamName}`;
                 window.open(paypalUrl, '_blank'); // Opens PayPal in a new tab
             }
             
         } catch (err) {
-            console.error('Error submitting form:', err);
+            if (err instanceof Error) {
+                console.error('Error submitting form:', err.message);
+            } else {
+                console.error('Error submitting form:', err);
+            }
             setSubmissionError('There was an error submitting your form. Please try again.');
         }
     };
@@ -281,60 +265,60 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
 
                 {/* Team Information */}
                 <div>
-                    <label htmlFor="teamName" className="block text-sm font-medium">Team Name</label>
+                    <label htmlFor="team_name" className="block text-sm font-medium">Team Name</label>
                     <input
                         type="text"
-                        id="teamName"
+                        id="team_name"
                         required
                         className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-                        value={teamName}
-                        onChange={(e) => setTeamName(e.target.value)}
+                        value={formData.team_name}
+                        onChange={handleInputChange}
                     />
                 </div>
 
                 {/* Captain Information */}
                 <h3 className='font-bold'>Captain Information</h3>
                 <div>
-                    <label htmlFor="captainName" className="block text-sm font-medium">Captain Name</label>
+                    <label htmlFor="captain_name" className="block text-sm font-medium">Captain Name</label>
                     <input
                         type="text"
-                        id="captainName"
+                        id="captain_name"
                         required
                         className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-                        value={captainName}
-                        onChange={(e) => setCaptainName(e.target.value)}
+                        value={formData.captain_name}
+                        onChange={handleInputChange}
                     />
                 </div>
                 <div>
-                    <label htmlFor="captainADLNumber" className="block text-sm font-medium">Captain ADL Number</label>
+                    <label htmlFor="captain_adl_number" className="block text-sm font-medium">Captain ADL Number</label>
                     <input
                         type="text"
-                        id="captainADLNumber"
+                        id="captain_adl_number"
                         required
                         className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-                        value={captainADLNumber}
-                        onChange={(e) => setCaptainADLNumber(e.target.value)}
+                        value={formData.captain_adl_number}
+                        onChange={handleInputChange}
                     />
                 </div>
                 <div>
-                    <label htmlFor="captainEmail" className="block text-sm font-medium">Captain Email</label>
+                    <label htmlFor="captain_email" className="block text-sm font-medium">Captain Email</label>
                     <input
                         type="email"
-                        id="captainEmail"
-                        value={captainEmail}
-                        onChange={handleCaptainEmailChange}
+                        id="captain_email"
+                        value={formData.captain_email}
+                        onChange={(e) => handleEmailChange(e, 'captain_email')}
                         required
                         className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
                     />
                     {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
                 </div>
                 <div>
-                    <label htmlFor="captainPhoneNumber" className="block text-sm font-medium">Captain Phone Number</label>
+                    <label htmlFor="captain_phone_number" className="block text-sm font-medium">Captain Phone Number</label>
                     <input
                         type="tel"
-                        id="captainPhoneNumber"
-                        value={captainPhoneNumber}
-                        onChange={handleCaptainPhoneNumberChange}
+                        id="captain_phone_number"
+                        value={formData.captain_phone_number}
+                        onChange={(e) => handlePhoneNumberChange(e, 'captain_phone_number')}
                         required
                         className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
                     />
@@ -343,57 +327,57 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                 <div>
                     <input
                         type="checkbox"
-                        id="captainPaidNDA"
-                        checked={captainHasPaidNDA}
-                        onChange={(e) => setCaptainHasPaidNDA(e.target.checked)}
+                        id="captain_paid_nda"
+                        checked={formData.captain_paid_nda}
+                        onChange={handleInputChange}
                         className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-md checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
                     />
-                    <label htmlFor="captainPaidNDA">Captain has paid the yearly NDA sanction fee.</label>
+                    <label htmlFor="captain_paid_nda">Captain has paid the yearly NDA sanction fee.</label>
                 </div>
 
                 {/* Teammate Information */}
                 <h3 className='font-bold'>Teammate Information</h3>
                 <div>
-                    <label htmlFor="teammateName" className="block text-sm font-medium">Teammate Name</label>
+                    <label htmlFor="teammate_name" className="block text-sm font-medium">Teammate Name</label>
                     <input
                         type="text"
-                        id="teammateName"
+                        id="teammate_name"
                         required
                         className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-                        value={teammateName}
-                        onChange={(e) => setTeammateName(e.target.value)}
+                        value={formData.teammate_name}
+                        onChange={handleInputChange}
                     />
                 </div>
                 <div>
-                    <label htmlFor="teammateADLNumber" className="block text-sm font-medium">Teammate ADL Number</label>
+                    <label htmlFor="teammate_adl_number" className="block text-sm font-medium">Teammate ADL Number</label>
                     <input
                         type="text"
-                        id="teammateADLNumber"
+                        id="teammate_adl_number"
                         required
                         className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-                        value={teammateADLNumber}
-                        onChange={(e) => setTeammateADLNumber(e.target.value)}
+                        value={formData.teammate_adl_number}
+                        onChange={handleInputChange}
                     />
                 </div>
                 <div>
-                    <label htmlFor="teammateEmail" className="block text-sm font-medium">Teammate Email</label>
+                    <label htmlFor="teammate_email" className="block text-sm font-medium">Teammate Email</label>
                     <input
                         type="email"
-                        id="teammateEmail"
-                        value={teammateEmail}
-                        onChange={handleTeammateEmailChange}
+                        id="teammate_email"
+                        value={formData.teammate_email}
+                        onChange={(e) => handleEmailChange(e, 'teammate_email')}
                         required
                         className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
                     />
                     {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
                 </div>
                 <div>
-                    <label htmlFor="teammatePhoneNumber" className="block text-sm font-medium">Teammate Phone Number</label>
+                    <label htmlFor="teammate_phone_number" className="block text-sm font-medium">Teammate Phone Number</label>
                     <input
                         type="tel"
-                        id="teammatePhoneNumber"
-                        value={teammatePhoneNumber}
-                        onChange={handleTeammatePhoneNumberChange}
+                        id="teammate_phone_number"
+                        value={formData.teammate_phone_number}
+                        onChange={(e) => handlePhoneNumberChange(e, 'teammate_phone_number')}
                         required
                         className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
                     />
@@ -402,22 +386,22 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                 <div>
                     <input
                         type="checkbox"
-                        id="teammatePaidNDA"
-                        checked={teammateHasPaidNDA}
-                        onChange={(e) => setTeammateHasPaidNDA(e.target.checked)}
+                        id="teammate_paid_nda"
+                        checked={formData.teammate_paid_nda}
+                        onChange={handleInputChange}
                         className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-md checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
                     />
-                    <label htmlFor="teammatePaidNDA">Teammate has paid the yearly NDA sanction fee.</label>
+                    <label htmlFor="teammate_paid_nda">Teammate has paid the yearly NDA sanction fee.</label>
                 </div>
 
                 {/* League Selection */}
                 <h3 className='font-bold'>League Selection</h3>
                 <div>
-                    <label htmlFor="league" className="block text-sm font-medium">What league are you playing in?</label>
+                    <label htmlFor="league_name" className="block text-sm font-medium">What league are you playing in?</label>
                     <select
-                        id="league"
-                        value={selectedLeague}
-                        onChange={(e) => setSelectedLeague(e.target.value)}
+                        id="league_name"
+                        value={formData.league_name}
+                        onChange={handleInputChange}
                         required
                         className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
                     >
@@ -432,11 +416,11 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
 
                 {/* Home Location Selection */}
                 <div>
-                    <label htmlFor="homeLocation1" className="block text-sm font-medium">Home Location 1st Choice</label>
+                    <label htmlFor="home_location_1" className="block text-sm font-medium">Home Location 1st Choice</label>
                     <select
-                        id="homeLocation1"
-                        value={homeLocation1}
-                        onChange={(e) => setHomeLocation1(e.target.value)}
+                        id="home_location_1"
+                        value={formData.home_location_1}
+                        onChange={handleInputChange}
                         required
                         className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
                     >
@@ -447,11 +431,11 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="homeLocation2" className="block text-sm font-medium">Home Location 2nd Choice</label>
+                    <label htmlFor="home_location_2" className="block text-sm font-medium">Home Location 2nd Choice</label>
                     <select
-                        id="homeLocation2"
-                        value={homeLocation2}
-                        onChange={(e) => setHomeLocation2(e.target.value)}
+                        id="home_location_2"
+                        value={formData.home_location_2}
+                        onChange={handleInputChange}
                         required
                         className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
                     >
@@ -470,12 +454,12 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                             <input
                                 type="radio"
                                 id="remote"
-                                name="playPreference"
+                                name="play_preference"
                                 value="Remote"
                                 required
                                 className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-full checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
-                                onChange={() => setSelectedPreference('Remote')}
-                                checked={selectedPreference === 'Remote'}
+                                onChange={handleInputChange}
+                                checked={formData.play_preference === 'Remote'}
                             />
                             <label htmlFor="remote">Remote</label>
                         </div>
@@ -483,12 +467,12 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                             <input
                                 type="radio"
                                 id="inPerson"
-                                name="playPreference"
+                                name="play_preference"
                                 value="In-person"
                                 required
                                 className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-full checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
-                                onChange={() => setSelectedPreference('In-person')}
-                                checked={selectedPreference === 'In-person'}
+                                onChange={handleInputChange}
+                                checked={formData.play_preference === 'In-person'}
                             />
                             <label htmlFor="inPerson">In-person</label>
                         </div>
@@ -501,15 +485,15 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                     <p>I understand that I will have to pay upon completion of this form.</p>
                     <p className='mt-2'>Sign Up Fees:</p>
                     <ul className="list-disc list-inside">
-                        <li>Captain League Fee: <strong>${captainLeagueCost.toFixed(2)}</strong></li>
-                        <li>Teammate League Fee: <strong>${teammateLeagueCost.toFixed(2)}</strong></li>
-                        {!captainHasPaidNDA && <li>Captain NDA Sanctioning Fee: <strong>${NDA_FEE.toFixed(2)}</strong></li>}
-                        {!teammateHasPaidNDA && <li>Teammate NDA Sanctioning Fee: <strong>${NDA_FEE.toFixed(2)}</strong></li>}
+                        <li>Captain League Fee: <strong>${formData.captain_league_cost.toFixed(2)}</strong></li>
+                        <li>Teammate League Fee: <strong>${formData.teammate_league_cost.toFixed(2)}</strong></li>
+                        {!formData.captain_paid_nda && <li>Captain NDA Sanctioning Fee: <strong>${NDA_FEE.toFixed(2)}</strong></li>}
+                        {!formData.teammate_paid_nda && <li>Teammate NDA Sanctioning Fee: <strong>${NDA_FEE.toFixed(2)}</strong></li>}
                     </ul>
 
                     <p className="mt-2">Fees Due:</p>
                     <ul className="list-disc list-inside">
-                        <li>Total: <strong>${totalDue.toFixed(2)}</strong></li>
+                        <li>Total: <strong>${formData.total_fees_due.toFixed(2)}</strong></li>
                     </ul>
                     <hr />
                     <p>This league is ADL, NDA, and NADO sanctioned.</p>
@@ -536,12 +520,12 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                             <input
                                 type="radio"
                                 id="venmo"
-                                name="paymentPreference"
+                                name="payment_method"
                                 value="Venmo"
                                 required
                                 className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-full checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
-                                onChange={() => setSelectedPaymentPreference('Venmo')}
-                                checked={paymentPreference === 'Venmo'}
+                                onChange={handleInputChange}
+                                checked={formData.payment_method === 'Venmo'}
                             />
                             <label htmlFor="venmo">Venmo</label>
                         </div>
@@ -549,12 +533,12 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                             <input
                                 type="radio"
                                 id="paypal"
-                                name="paymentPreference"
+                                name="payment_method"
                                 value="Paypal"
                                 required
                                 className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-full checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
-                                onChange={() => setSelectedPaymentPreference('Paypal')}
-                                checked={paymentPreference === 'Paypal'}
+                                onChange={handleInputChange}
+                                checked={formData.payment_method === 'Paypal'}
                             />
                             <label htmlFor="paypal">Paypal</label>
                         </div>
