@@ -1,6 +1,10 @@
 /* eslint-disable react/no-unescaped-entities */
 import React, { useEffect, useState } from 'react';
-import { InfoItem } from '@/components/InfoModal';
+
+export interface Content { // Define the InfoItem interface here
+    id: string;
+    content: React.ReactNode;
+}
 
 const ClientSideLink: React.FC = () => {
     const [isClient, setIsClient] = useState(false);
@@ -34,7 +38,7 @@ const ClientSideLink: React.FC = () => {
     )
 };
 
-export const newPlayerInfo: InfoItem[] = [
+export const newPlayerInfo: Content[] = [
     {
         id: 'new-player-info',
         content: (
@@ -94,3 +98,17 @@ export const newPlayerInfo: InfoItem[] = [
         ),
     },
 ];
+
+interface NewPlayerProps {
+    items: Content[];
+}
+
+export const NewPlayerContent: React.FC<NewPlayerProps> = ({ items }) => {
+    return (
+        <div>
+            {items.map((item) => (
+                <div key={item.id}>{item.content}</div>
+            ))}
+        </div>
+    );
+};

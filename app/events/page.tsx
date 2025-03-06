@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect} from 'react';
 import { supabase } from '@/utils/supabaseClient';
 import NavBar from '@/components/NavBar';
 import EventCard from './EventCard';
@@ -7,11 +7,9 @@ import Button from '@/components/Button';
 import Footer from '@/components/Footer';
 import Announcement from '@/components/Announcement';
 import Modal from '@/components/Modal';
-import TableOfContentsModal from '@/components/TableOfContentsModal';
-import InfoModal from '@/components/InfoModal';
-import { faqs } from './faqContent';
-import { newPlayerInfo } from './newPlayerContent';
-import { codeOfConductInfo } from './codeOfConductContent';
+import { faqInfo, FAQContent } from './eventsFAQModal';
+import { newPlayerInfo, NewPlayerContent } from './eventsNewPlayerModal';
+import { conductCodeInfo, ConductCodeContent } from './eventsConductCodeModal';
 import { FaQuestionCircle, FaUserPlus, FaBook } from 'react-icons/fa'; // Import icons
 
 // Type Definitions
@@ -39,7 +37,6 @@ const EventsPage = () => {
     const [isFAQModalOpen, setIsFAQModalOpen] = useState(false);
     const [isNewPlayerModalOpen, setIsNewPlayerModalOpen] = useState(false);
     const [isCodeOfConductModalOpen, setIsCodeOfConductModalOpen] = useState(false);
-    const tocModalRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
 
     // Fetch Events from Supabase
     useEffect(() => {
@@ -132,7 +129,7 @@ const EventsPage = () => {
                   isOpen={isNewPlayerModalOpen}
                   onClose={() => setIsNewPlayerModalOpen(false)}
                   title="New Player Information"
-                  content={<InfoModal items={newPlayerInfo} />}
+                  content={<NewPlayerContent items={newPlayerInfo} />}
                 />
 
                 {/* Modal Component with Code of Conduct Content */}
@@ -140,7 +137,7 @@ const EventsPage = () => {
                   isOpen={isCodeOfConductModalOpen}
                   onClose={() => setIsCodeOfConductModalOpen(false)}
                   title="Code of Conduct"
-                  content={<InfoModal items={codeOfConductInfo} />}
+                  content={<ConductCodeContent items={conductCodeInfo} />}
                 />                 
 
                 {/* Modal Component with FAQ Content */}
@@ -148,7 +145,7 @@ const EventsPage = () => {
                     isOpen={isFAQModalOpen}
                     onClose={() => setIsFAQModalOpen(false)}
                     title="Event FAQs"
-                    content={<TableOfContentsModal items={faqs} scrollContainerRef={tocModalRef} />}
+                    content={<FAQContent items={faqInfo} />}
                 />
 
                 {/* Filters Section */}

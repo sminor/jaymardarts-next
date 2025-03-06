@@ -5,6 +5,7 @@ import Footer from '@/components/Footer';
 import Announcement from '@/components/Announcement';
 import Button from '@/components/Button';
 import Modal from '@/components/Modal';
+import LeagueSignupForm from './leagueSignupModal'; // Import the new component
 import { FaUsers, FaDollarSign, FaCalendarAlt, FaTrophy } from 'react-icons/fa'; // Import icons
 
 const Leagues = () => {
@@ -80,7 +81,7 @@ const Leagues = () => {
                     isOpen={isSignupModalOpen}
                     onClose={() => setIsSignupModalOpen(false)}
                     title="League Sign-up"
-                    content={<p>Sign-up information will go here.</p>}
+                    content={<LeagueSignupForm />} // Render the form component here
                 />
 
                 {/* Fees Modal */}

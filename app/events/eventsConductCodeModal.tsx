@@ -1,8 +1,11 @@
-// app/events/codeOfConductContent.tsx
 import React from 'react';
-import { InfoItem } from '@/components/InfoModal';
 
-export const codeOfConductInfo: InfoItem[] = [
+interface Content {
+    id: string;
+    content: React.ReactNode;
+}
+
+export const conductCodeInfo: Content[] = [
     {
         id: 'code-of-conduct-info',
         content: (
@@ -68,3 +71,17 @@ export const codeOfConductInfo: InfoItem[] = [
         ),
     },
 ];
+
+interface ConductCodeProps {
+    items: Content[];
+}
+
+export const ConductCodeContent: React.FC<ConductCodeProps> = ({ items }) => {
+    return (
+        <div>
+            {items.map((item) => (
+                <div key={item.id}>{item.content}</div>
+            ))}
+        </div>
+    );
+};

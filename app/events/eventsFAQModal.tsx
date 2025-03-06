@@ -1,8 +1,15 @@
 /* eslint-disable react/no-unescaped-entities */
-import React from 'react';
-import { TableOfContentsItem } from '@/components/TableOfContentsModal';
+import React, { useState, useRef, useEffect } from 'react';
+import Button from '@/components/Button';
+import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 
-export const faqs: TableOfContentsItem[] = [
+export interface Content {
+    id: string;
+    title: string;
+    content: React.ReactNode;
+}
+
+export const faqInfo: Content[] = [
     {
         id: "signup-times",
         title: "What are the sign-up times?",
@@ -114,3 +121,79 @@ export const faqs: TableOfContentsItem[] = [
         )
     }
 ];
+
+interface FAQProps {
+    items: Content[];
+}
+
+// Table of Contents Component
+export const FAQContent: React.FC<FAQProps> = ({ items }) => {
+    const [currentTOCIndex, setCurrentTOCIndex] = useState<number | null>(null);
+    const tocRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+    useEffect(() => {
+        if (currentTOCIndex !== null) {
+            const selectedTOC = items[currentTOCIndex];
+
+            setTimeout(() => {
+                const targetElement = tocRefs.current[selectedTOC.id];
+                if (targetElement) {
+                    targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+                    targetElement.focus();
+                }
+            }, 100);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentTOCIndex]);
+
+    return (
+        <div>
+            {/* Table of Contents */}
+            <div>
+                <ul>
+                    {items.map((toc, index) => (
+                        <li key={toc.id}>
+                            <button
+                                className={`text-[var(--text-link)] text-left ${currentTOCIndex === index ? "font-bold underline" : ""}`}
+                                onClick={() => setCurrentTOCIndex(index)}
+                            >
+                                {toc.title}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+
+            {/* Display selected TOC item */}
+            {currentTOCIndex !== null && (
+                <><hr />
+                <div key={items[currentTOCIndex].id} ref={(el) => { tocRefs.current[items[currentTOCIndex].id] = el || null; }}>
+                    <h3 id={items[currentTOCIndex].id} tabIndex={-1}>{items[currentTOCIndex].title}</h3>
+                    <div>{items[currentTOCIndex].content}</div>
+                </div>
+                </>
+            )}
+
+            {/* Navigation Buttons */}
+            {currentTOCIndex !== null && (
+                <div className="flex justify-center gap-4 mt-4">
+                    <Button
+                        onClick={() => setCurrentTOCIndex(Math.max(currentTOCIndex - 1, 0))}
+                        className="p-2 rounded w-10 h-10 flex items-center justify-center"
+                        disabled={currentTOCIndex === 0}
+                    >
+                        <FaArrowLeft />
+                    </Button>
+
+                    <Button
+                        onClick={() => setCurrentTOCIndex(Math.min(currentTOCIndex + 1, items.length - 1))}
+                        className="p-2 rounded w-10 h-10 flex items-center justify-center"
+                        disabled={currentTOCIndex === items.length - 1}
+                    >
+                        <FaArrowRight />
+                    </Button>
+                </div>
+            )}
+        </div>
+    );
+};
