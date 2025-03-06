@@ -132,14 +132,14 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
     }, []);
 
     useEffect(() => {
-        calculateTotalDue();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedLeague, captainHasPaidNDA, teammateHasPaidNDA]);
-
-    const calculateTotalDue = () => {
-        const league = leagues.find(l => l.name === selectedLeague);
+        if (!selectedLeague) {
+            setTotalDue(0);
+            setCaptainLeagueCost(0);
+            setTeammateLeagueCost(0);
+            return;
+        }
     
-        // NDA fees (always included if checkboxes are unchecked)
+        const league = leagues.find((l) => l.name === selectedLeague);
         const captainNDAFee = captainHasPaidNDA ? 0 : NDA_FEE;
         const teammateNDAFee = teammateHasPaidNDA ? 0 : NDA_FEE;
     
@@ -150,17 +150,10 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
             return;
         }
     
-        // Base costs
-        const baseCaptainLeagueCost = league.cost_per_player;
-        const baseTeammateLeagueCost = league.cost_per_player;
-    
-        // Calculate total
-        const calculatedTotal = baseCaptainLeagueCost + baseTeammateLeagueCost + captainNDAFee + teammateNDAFee;
-    
-        setCaptainLeagueCost(baseCaptainLeagueCost);
-        setTeammateLeagueCost(baseTeammateLeagueCost);
-        setTotalDue(calculatedTotal);
-    };
+        setCaptainLeagueCost(league.cost_per_player);
+        setTeammateLeagueCost(league.cost_per_player);
+        setTotalDue(league.cost_per_player * 2 + captainNDAFee + teammateNDAFee);
+    }, [selectedLeague, captainHasPaidNDA, teammateHasPaidNDA, leagues]);
     
     
 
@@ -210,11 +203,7 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
         e.preventDefault();
         setSubmissionError(null);
 
-        // Basic validation - ensure required fields are filled
-        if (!teamName || !captainName || !captainADLNumber || !captainEmail || !captainPhoneNumber || !teammateName || !teammateADLNumber || !teammateEmail || !teammatePhoneNumber || !selectedLeague || !homeLocation1 || !homeLocation2 || !selectedPreference || !paymentPreference) {
-            setSubmissionError('Please fill in all required fields.');
-            return;
-        }
+        // Validate email and phone number formats
         if (emailError || phoneError) {
             setSubmissionError('Please correct any email or phone number errors.');
             return;
