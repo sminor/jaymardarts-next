@@ -81,7 +81,7 @@ const Leagues = () => {
                     isOpen={isSignupModalOpen}
                     onClose={() => setIsSignupModalOpen(false)}
                     title="League Sign-up"
-                    content={<LeagueSignupForm />} // Render the form component here
+                    content={<LeagueSignupForm closeModal={() => setIsSignupModalOpen(false)} />} // Render the form component here
                 />
 
                 {/* Fees Modal */}

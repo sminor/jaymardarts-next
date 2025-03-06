@@ -38,6 +38,7 @@ interface SignupFormData {
     total_fees_due: number;
     captain_league_cost: number;
     teammate_league_cost: number;
+    payment_method: string;
 }
 
 // Helper function to validate email format
@@ -67,7 +68,7 @@ const formatPhoneNumber = (phoneNumber: string): string => {
 
 const NDA_FEE = 10;
 
-const LeagueSignupForm: React.FC = () => {
+const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) => {
     const [locations, setLocations] = useState<Location[]>([]);
     const [leagues, setLeagues] = useState<League[]>([]);
     const [selectedLeague, setSelectedLeague] = useState<string>('');
@@ -92,7 +93,8 @@ const LeagueSignupForm: React.FC = () => {
     const [homeLocation1, setHomeLocation1] = useState('');
     const [homeLocation2, setHomeLocation2] = useState('');
     const [submissionError, setSubmissionError] = useState<string | null>(null);
-    const [submissionSuccess, setSubmissionSuccess] = useState<boolean>(false);
+    const [paymentPreference, setSelectedPaymentPreference] = useState<string>('');
+
 
     useEffect(() => {
         const fetchLeagues = async () => {
@@ -207,10 +209,9 @@ const LeagueSignupForm: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSubmissionError(null);
-        setSubmissionSuccess(false);
 
         // Basic validation - ensure required fields are filled
-        if (!teamName || !captainName || !captainADLNumber || !captainEmail || !captainPhoneNumber || !teammateName || !teammateADLNumber || !teammateEmail || !teammatePhoneNumber || !selectedLeague || !homeLocation1 || !homeLocation2 || !selectedPreference) {
+        if (!teamName || !captainName || !captainADLNumber || !captainEmail || !captainPhoneNumber || !teammateName || !teammateADLNumber || !teammateEmail || !teammatePhoneNumber || !selectedLeague || !homeLocation1 || !homeLocation2 || !selectedPreference || !paymentPreference) {
             setSubmissionError('Please fill in all required fields.');
             return;
         }
@@ -237,11 +238,12 @@ const LeagueSignupForm: React.FC = () => {
             play_preference: selectedPreference,
             total_fees_due: totalDue,
             captain_league_cost: captainLeagueCost,
-            teammate_league_cost: teammateLeagueCost
+            teammate_league_cost: teammateLeagueCost,
+            payment_method: paymentPreference
         };
 
         try {
-            const { data, error } = await supabase
+            const { error } = await supabase
                 .from('league_signups')
                 .insert([formData])
                 .select()
@@ -251,29 +253,24 @@ const LeagueSignupForm: React.FC = () => {
                 throw error;
             }
 
-            // Reset form fields and success message
-            setSubmissionSuccess(true);
-            setTeamName('');
-            setCaptainName('');
-            setCaptainADLNumber('');
-            setCaptainEmail('');
-            setCaptainPhoneNumber('');
-            setCaptainHasPaidNDA(false);
-            setTeammateName('');
-            setTeammateADLNumber('');
-            setTeammateEmail('');
-            setTeammatePhoneNumber('');
-            setTeammateHasPaidNDA(false);
-            setSelectedLeague('');
-            setHomeLocation1('');
-            setHomeLocation2('');
-            setSelectedPreference('');
-            setTotalDue(0);
-            setCaptainLeagueCost(0);
-            setTeammateLeagueCost(0);
+            // Close the modal before redirecting
+            closeModal();
 
-            console.log('Form data submitted:', data);
+            // Show success message (user must acknowledge before continuing)
+            alert(`Your signup was successful! You will now be redirected to complete your payment of $${totalDue.toFixed(2)}. Click "OK" to continue.`);
+            
+            // Encode teamName to ensure it is safe for URLs
+            const encodedTeamName = encodeURIComponent(`League Signup: ${teamName}`);
 
+            // Redirect to payment URL based on selection
+            if (paymentPreference === 'Venmo') {
+                const venmoUrl = `https://venmo.com/jay-phillips-36?txn=pay&amount=${totalDue.toFixed(2)}&note=${encodedTeamName}`;
+                window.open(venmoUrl, '_blank');
+            } else if (paymentPreference === 'Paypal') {
+                const paypalUrl = `https://paypal.me/jayphillips1528/${totalDue.toFixed(2)}?currencyCode=USD&note=${encodedTeamName}`;
+                window.open(paypalUrl, '_blank'); // Opens PayPal in a new tab
+            }
+            
         } catch (err) {
             console.error('Error submitting form:', err);
             setSubmissionError('There was an error submitting your form. Please try again.');
@@ -293,221 +290,221 @@ const LeagueSignupForm: React.FC = () => {
                     <p className="mt-4 mb-0">Please fill out the form completely. If you do not have an ADL number, use N/A.</p>
                 </div>
 
-{/* Team Information */}
-<div>
-    <label htmlFor="teamName" className="block text-sm font-medium">Team Name</label>
-    <input
-        type="text"
-        id="teamName"
-        required
-        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-        value={teamName}
-        onChange={(e) => setTeamName(e.target.value)}
-    />
-</div>
+                {/* Team Information */}
+                <div>
+                    <label htmlFor="teamName" className="block text-sm font-medium">Team Name</label>
+                    <input
+                        type="text"
+                        id="teamName"
+                        required
+                        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                        value={teamName}
+                        onChange={(e) => setTeamName(e.target.value)}
+                    />
+                </div>
 
-{/* Captain Information */}
-<h3 className='font-bold'>Captain Information</h3>
-<div>
-    <label htmlFor="captainName" className="block text-sm font-medium">Captain Name</label>
-    <input
-        type="text"
-        id="captainName"
-        required
-        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-        value={captainName}
-        onChange={(e) => setCaptainName(e.target.value)}
-    />
-</div>
-<div>
-    <label htmlFor="captainADLNumber" className="block text-sm font-medium">Captain ADL Number</label>
-    <input
-        type="text"
-        id="captainADLNumber"
-        required
-        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-        value={captainADLNumber}
-        onChange={(e) => setCaptainADLNumber(e.target.value)}
-    />
-</div>
-<div>
-    <label htmlFor="captainEmail" className="block text-sm font-medium">Captain Email</label>
-    <input
-        type="email"
-        id="captainEmail"
-        value={captainEmail}
-        onChange={handleCaptainEmailChange}
-        required
-        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-    />
-    {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
-</div>
-<div>
-    <label htmlFor="captainPhoneNumber" className="block text-sm font-medium">Captain Phone Number</label>
-    <input
-        type="tel"
-        id="captainPhoneNumber"
-        value={captainPhoneNumber}
-        onChange={handleCaptainPhoneNumberChange}
-        required
-        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-    />
-    {phoneError && <p className="text-red-500 text-sm">{phoneError}</p>}
-</div>
-<div>
-    <input
-        type="checkbox"
-        id="captainPaidNDA"
-        checked={captainHasPaidNDA}
-        onChange={(e) => setCaptainHasPaidNDA(e.target.checked)}
-        className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-md checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
-    />
-    <label htmlFor="captainPaidNDA">Captain has paid the yearly NDA sanction fee.</label>
-</div>
+                {/* Captain Information */}
+                <h3 className='font-bold'>Captain Information</h3>
+                <div>
+                    <label htmlFor="captainName" className="block text-sm font-medium">Captain Name</label>
+                    <input
+                        type="text"
+                        id="captainName"
+                        required
+                        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                        value={captainName}
+                        onChange={(e) => setCaptainName(e.target.value)}
+                    />
+                </div>
+                <div>
+                    <label htmlFor="captainADLNumber" className="block text-sm font-medium">Captain ADL Number</label>
+                    <input
+                        type="text"
+                        id="captainADLNumber"
+                        required
+                        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                        value={captainADLNumber}
+                        onChange={(e) => setCaptainADLNumber(e.target.value)}
+                    />
+                </div>
+                <div>
+                    <label htmlFor="captainEmail" className="block text-sm font-medium">Captain Email</label>
+                    <input
+                        type="email"
+                        id="captainEmail"
+                        value={captainEmail}
+                        onChange={handleCaptainEmailChange}
+                        required
+                        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                    />
+                    {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
+                </div>
+                <div>
+                    <label htmlFor="captainPhoneNumber" className="block text-sm font-medium">Captain Phone Number</label>
+                    <input
+                        type="tel"
+                        id="captainPhoneNumber"
+                        value={captainPhoneNumber}
+                        onChange={handleCaptainPhoneNumberChange}
+                        required
+                        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                    />
+                    {phoneError && <p className="text-red-500 text-sm">{phoneError}</p>}
+                </div>
+                <div>
+                    <input
+                        type="checkbox"
+                        id="captainPaidNDA"
+                        checked={captainHasPaidNDA}
+                        onChange={(e) => setCaptainHasPaidNDA(e.target.checked)}
+                        className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-md checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
+                    />
+                    <label htmlFor="captainPaidNDA">Captain has paid the yearly NDA sanction fee.</label>
+                </div>
 
-{/* Teammate Information */}
-<h3 className='font-bold'>Teammate Information</h3>
-<div>
-    <label htmlFor="teammateName" className="block text-sm font-medium">Teammate Name</label>
-    <input
-        type="text"
-        id="teammateName"
-        required
-        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-        value={teammateName}
-        onChange={(e) => setTeammateName(e.target.value)}
-    />
-</div>
-<div>
-    <label htmlFor="teammateADLNumber" className="block text-sm font-medium">Teammate ADL Number</label>
-    <input
-        type="text"
-        id="teammateADLNumber"
-        required
-        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-        value={teammateADLNumber}
-        onChange={(e) => setTeammateADLNumber(e.target.value)}
-    />
-</div>
-<div>
-    <label htmlFor="teammateEmail" className="block text-sm font-medium">Teammate Email</label>
-    <input
-        type="email"
-        id="teammateEmail"
-        value={teammateEmail}
-        onChange={handleTeammateEmailChange}
-        required
-        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-    />
-    {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
-</div>
-<div>
-    <label htmlFor="teammatePhoneNumber" className="block text-sm font-medium">Teammate Phone Number</label>
-    <input
-        type="tel"
-        id="teammatePhoneNumber"
-        value={teammatePhoneNumber}
-        onChange={handleTeammatePhoneNumberChange}
-        required
-        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-    />
-    {phoneError && <p className="text-red-500 text-sm">{phoneError}</p>}
-</div>
-<div>
-    <input
-        type="checkbox"
-        id="teammatePaidNDA"
-        checked={teammateHasPaidNDA}
-        onChange={(e) => setTeammateHasPaidNDA(e.target.checked)}
-        className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-md checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
-    />
-    <label htmlFor="teammatePaidNDA">Teammate has paid the yearly NDA sanction fee.</label>
-</div>
+                {/* Teammate Information */}
+                <h3 className='font-bold'>Teammate Information</h3>
+                <div>
+                    <label htmlFor="teammateName" className="block text-sm font-medium">Teammate Name</label>
+                    <input
+                        type="text"
+                        id="teammateName"
+                        required
+                        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                        value={teammateName}
+                        onChange={(e) => setTeammateName(e.target.value)}
+                    />
+                </div>
+                <div>
+                    <label htmlFor="teammateADLNumber" className="block text-sm font-medium">Teammate ADL Number</label>
+                    <input
+                        type="text"
+                        id="teammateADLNumber"
+                        required
+                        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                        value={teammateADLNumber}
+                        onChange={(e) => setTeammateADLNumber(e.target.value)}
+                    />
+                </div>
+                <div>
+                    <label htmlFor="teammateEmail" className="block text-sm font-medium">Teammate Email</label>
+                    <input
+                        type="email"
+                        id="teammateEmail"
+                        value={teammateEmail}
+                        onChange={handleTeammateEmailChange}
+                        required
+                        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                    />
+                    {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
+                </div>
+                <div>
+                    <label htmlFor="teammatePhoneNumber" className="block text-sm font-medium">Teammate Phone Number</label>
+                    <input
+                        type="tel"
+                        id="teammatePhoneNumber"
+                        value={teammatePhoneNumber}
+                        onChange={handleTeammatePhoneNumberChange}
+                        required
+                        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                    />
+                    {phoneError && <p className="text-red-500 text-sm">{phoneError}</p>}
+                </div>
+                <div>
+                    <input
+                        type="checkbox"
+                        id="teammatePaidNDA"
+                        checked={teammateHasPaidNDA}
+                        onChange={(e) => setTeammateHasPaidNDA(e.target.checked)}
+                        className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-md checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
+                    />
+                    <label htmlFor="teammatePaidNDA">Teammate has paid the yearly NDA sanction fee.</label>
+                </div>
 
-{/* League Selection */}
-<h3 className='font-bold'>League Selection</h3>
-<div>
-    <label htmlFor="league" className="block text-sm font-medium">What league are you playing in?</label>
-    <select
-        id="league"
-        value={selectedLeague}
-        onChange={(e) => setSelectedLeague(e.target.value)}
-        required
-        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-    >
-        <option value="">Select a league</option>
-        {leagues.map((league) => (
-            <option key={league.id} value={league.name}>
-                {league.name} - {league.cap_details} {league.day_of_week} {league.start_time}
-            </option>
-        ))}
-    </select>
-</div>
+                {/* League Selection */}
+                <h3 className='font-bold'>League Selection</h3>
+                <div>
+                    <label htmlFor="league" className="block text-sm font-medium">What league are you playing in?</label>
+                    <select
+                        id="league"
+                        value={selectedLeague}
+                        onChange={(e) => setSelectedLeague(e.target.value)}
+                        required
+                        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                    >
+                        <option value="">Select a league</option>
+                        {leagues.map((league) => (
+                            <option key={league.id} value={league.name}>
+                                {league.name} - {league.cap_details} {league.day_of_week} {league.start_time}
+                            </option>
+                        ))}
+                    </select>
+                </div>
 
-{/* Home Location Selection */}
-<div>
-    <label htmlFor="homeLocation1" className="block text-sm font-medium">Home Location 1st Choice</label>
-    <select
-        id="homeLocation1"
-        value={homeLocation1}
-        onChange={(e) => setHomeLocation1(e.target.value)}
-        required
-        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-    >
-        <option value="">Select a location</option>
-        {locations.map(location => (
-            <option key={location.id} value={location.name}>{location.name}</option>
-        ))}
-    </select>
-</div>
-<div>
-    <label htmlFor="homeLocation2" className="block text-sm font-medium">Home Location 2nd Choice</label>
-    <select
-        id="homeLocation2"
-        value={homeLocation2}
-        onChange={(e) => setHomeLocation2(e.target.value)}
-        required
-        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-    >
-        <option value="">Select a location</option>
-        {locations.map(location => (
-            <option key={location.id} value={location.name}>{location.name}</option>
-        ))}
-    </select>
-</div>
+                {/* Home Location Selection */}
+                <div>
+                    <label htmlFor="homeLocation1" className="block text-sm font-medium">Home Location 1st Choice</label>
+                    <select
+                        id="homeLocation1"
+                        value={homeLocation1}
+                        onChange={(e) => setHomeLocation1(e.target.value)}
+                        required
+                        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                    >
+                        <option value="">Select a location</option>
+                        {locations.map(location => (
+                            <option key={location.id} value={location.name}>{location.name}</option>
+                        ))}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="homeLocation2" className="block text-sm font-medium">Home Location 2nd Choice</label>
+                    <select
+                        id="homeLocation2"
+                        value={homeLocation2}
+                        onChange={(e) => setHomeLocation2(e.target.value)}
+                        required
+                        className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                    >
+                        <option value="">Select a location</option>
+                        {locations.map(location => (
+                            <option key={location.id} value={location.name}>{location.name}</option>
+                        ))}
+                    </select>
+                </div>
 
-{/* Play Preference */}
-<div>
-    <label className="block text-sm font-medium">I prefer to play</label>
-    <div className="mt-1 flex gap-4">
-        <div>
-            <input
-                type="radio"
-                id="remote"
-                name="playPreference"
-                value="Remote"
-                required
-                className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-full checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
-                onChange={() => setSelectedPreference('Remote')}
-                checked={selectedPreference === 'Remote'}
-            />
-            <label htmlFor="remote">Remote</label>
-        </div>
-        <div>
-            <input
-                type="radio"
-                id="inPerson"
-                name="playPreference"
-                value="In-person"
-                required
-                className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-full checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
-                onChange={() => setSelectedPreference('In-person')}
-                checked={selectedPreference === 'In-person'}
-            />
-            <label htmlFor="inPerson">In-person</label>
-        </div>
-    </div>
-</div>
+                {/* Play Preference */}
+                <div>
+                    <label className="block text-sm font-medium">I prefer to play</label>
+                    <div className="mt-1 flex gap-4">
+                        <div>
+                            <input
+                                type="radio"
+                                id="remote"
+                                name="playPreference"
+                                value="Remote"
+                                required
+                                className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-full checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
+                                onChange={() => setSelectedPreference('Remote')}
+                                checked={selectedPreference === 'Remote'}
+                            />
+                            <label htmlFor="remote">Remote</label>
+                        </div>
+                        <div>
+                            <input
+                                type="radio"
+                                id="inPerson"
+                                name="playPreference"
+                                value="In-person"
+                                required
+                                className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-full checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
+                                onChange={() => setSelectedPreference('In-person')}
+                                checked={selectedPreference === 'In-person'}
+                            />
+                            <label htmlFor="inPerson">In-person</label>
+                        </div>
+                    </div>
+                </div>
 
 
                 {/* Payment Information */}
@@ -541,17 +538,46 @@ const LeagueSignupForm: React.FC = () => {
                     <label htmlFor="terms" className="text-sm font-medium">I agree to the terms provided above</label>
                 </div>
 
+                {/* Payment Preference */}
+                <h3 className='font-bold'>Payment Preference</h3>
+                <div>
+                    <label className="block text-sm font-medium">How would you prefer to pay?</label>
+                    <div className="mt-1 flex gap-4">
+                        <div>
+                            <input
+                                type="radio"
+                                id="venmo"
+                                name="paymentPreference"
+                                value="Venmo"
+                                required
+                                className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-full checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
+                                onChange={() => setSelectedPaymentPreference('Venmo')}
+                                checked={paymentPreference === 'Venmo'}
+                            />
+                            <label htmlFor="venmo">Venmo</label>
+                        </div>
+                        <div>
+                            <input
+                                type="radio"
+                                id="paypal"
+                                name="paymentPreference"
+                                value="Paypal"
+                                required
+                                className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-full checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
+                                onChange={() => setSelectedPaymentPreference('Paypal')}
+                                checked={paymentPreference === 'Paypal'}
+                            />
+                            <label htmlFor="paypal">Paypal</label>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Submit Button */}
                 <button type="submit" className="w-full p-2 text-white bg-[var(--button-background)] rounded-md">Submit</button>
 
                 {submissionError && (
                     <div className="text-red-500 text-center mb-4">
                         {submissionError}
-                    </div>
-                )}
-                {submissionSuccess && (
-                    <div className="text-green-500 text-center mb-4">
-                        Form submitted successfully!
                     </div>
                 )}
             </form>

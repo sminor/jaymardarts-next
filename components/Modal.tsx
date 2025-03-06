@@ -53,7 +53,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, content, title, classNam
                 </div>
 
                 {/* Render dynamic content */}
-                <div className="max-h-[90vh] overflow-y-auto scrollbar-custom px-4">{content}</div>
+                <div className="max-h-[70vh] overflow-y-auto scrollbar-custom px-4">{content}</div>
             </div>
         </div>
     );
