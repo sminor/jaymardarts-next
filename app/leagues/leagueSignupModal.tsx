@@ -254,7 +254,7 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
 
     return (
         <div className="flex justify-center">
-            <form className="space-y-4 w-full max-w-lg md:max-w-2xl" onSubmit={handleSubmit}>
+            <form className="space-y-4 w-full md:max-w-2xl" onSubmit={handleSubmit}>
                 {/* Informational Text */}
                 <div className="mb-6 p-4 bg-[var(--card-background)] rounded-md text-sm">
                     <p className="mt-0">Sign-ups close on <strong className="underline">March 26, 2025</strong>. </p>
@@ -512,9 +512,9 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                 </div>
 
                 {/* Payment Preference */}
-                <h3 className='font-bold'>Payment Preference</h3>
+                <h3 className='font-bold'>Payment Method</h3>
                 <div>
-                    <label className="block text-sm font-medium">How would you prefer to pay?</label>
+                    <label className="block text-sm font-medium"></label>
                     <div className="mt-1 flex gap-4">
                         <div>
                             <input
