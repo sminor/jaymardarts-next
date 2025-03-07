@@ -56,6 +56,10 @@ const LeagueSchedulesModal: React.FC = () => {
     const [matchupsByDate, setMatchupsByDate] = useState<Record<string, MatchScheduleData[]>>({});
     const [playerData, setPlayerData] = useState<TeamData[]>([]);
     const [expandedMatchups, setExpandedMatchups] = useState<Record<string, Record<number, boolean>>>({});
+    const [matchFilter, setMatchFilter] = useState<'upcoming' | 'next' | 'all'>('upcoming');
+    const [weekNumbers, setWeekNumbers] = useState<Record<string, number>>({});
+
+
 
     // Fetch Leagues and Flights
     useEffect(() => {
@@ -110,28 +114,30 @@ const LeagueSchedulesModal: React.FC = () => {
     }, [leagues, leagueFlights]);
 
     // Extract Schedule Data
-    const extractScheduleData = (fullHtml: string) => {
+    const extractScheduleData = useCallback((fullHtml: string) => {
         const $ = cheerio.load(fullHtml);
         const table = $('table.report:nth-of-type(2)');
         const matchupsByDate: Record<string, MatchScheduleData[]> = {};
+        
         let currentDate = "";
-
+    
         if (table.length > 0) {
             table.find('tr').each((_rowIndex, rowElement) => {
                 const cells = $(rowElement).find('td');
-
+    
                 if (cells.length >= 6) {
                     const dateText = $(cells[1]).text().trim();
                     const homeTeam = $(cells[2]).text().trim();
                     const awayTeam = $(cells[3]).text().trim();
                     const atLocation = $(cells[4]).text().trim();
-
+    
                     if (dateText) currentDate = dateText;
-
+    
                     if (homeTeam || awayTeam) {
                         if (!matchupsByDate[currentDate]) {
                             matchupsByDate[currentDate] = [];
                         }
+    
                         matchupsByDate[currentDate].push({
                             homeTeam: homeTeam || null,
                             awayTeam: awayTeam || null,
@@ -140,8 +146,49 @@ const LeagueSchedulesModal: React.FC = () => {
                     }
                 }
             });
-
-            setMatchupsByDate(matchupsByDate);
+    
+            // **Assign Fixed Week Numbers**
+            const datesSorted = Object.keys(matchupsByDate).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    
+            const newWeekNumbers: Record<string, number> = {};
+            datesSorted.forEach((date, index) => {
+                newWeekNumbers[date] = index + 1; // Assign fixed week numbers based on sorted order
+            });
+    
+            setWeekNumbers(newWeekNumbers); // Store week numbers in state so JSX can access it
+    
+            // **Standardize today's date format to match dataset (M/D/YYYY)**
+            const today = new Date('2024-11-11'); // Fake today's date for testing
+            const todayFormatted = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`; 
+    
+            const filteredMatchups: Record<string, MatchScheduleData[]> = {};
+    
+            // **Filter matches based on selection**
+            Object.entries(matchupsByDate).forEach(([date, matches]) => {
+                if (matchFilter === 'all' || (matchFilter === 'upcoming' && date >= todayFormatted)) {
+                    filteredMatchups[date] = matches;
+                }
+            });
+    
+            // **Find the Next Match without modifying week structure**
+            if (matchFilter === 'next') {
+    
+                // Find the first date that is greater than or equal to today
+                const nextMatchDate = Object.keys(matchupsByDate)
+                    .filter(date => date >= todayFormatted) // Compare using the same format
+                    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0]; // Get the closest match
+    
+                if (nextMatchDate) {
+                    setMatchupsByDate({ [nextMatchDate]: matchupsByDate[nextMatchDate] });
+                } else {
+                    console.log("No upcoming matches found!");
+                    setMatchupsByDate({});
+                }
+            } else {
+                setMatchupsByDate(filteredMatchups);
+            }
+    
+            // **Preserve original week numbers by expanding all dates**
             const newExpandedMatchups: Record<string, Record<number, boolean>> = {};
             Object.keys(matchupsByDate).forEach((date) => {
                 newExpandedMatchups[date] = {};
@@ -153,7 +200,10 @@ const LeagueSchedulesModal: React.FC = () => {
         } else {
             setScheduleError("No data table found on page.");
         }
-    };
+    }, [matchFilter]); // Added `matchFilter` as a dependency
+    
+    
+    
 
     // Extract Player Data
     const extractPlayerData = (fullHtml: string): TeamData[] => {
@@ -184,23 +234,27 @@ const LeagueSchedulesModal: React.FC = () => {
 
     // Fetch Players
     const fetchPlayers = useCallback(async () => {
-        if (!selectedFlight?.players_url) {
-            console.log("No players URL set for this flight");
-            return;
+        if (!selectedFlight || !selectedFlight.players_url) {
+            return; // Prevent fetching if no flight is selected
         }
+
         setPlayerData([]);
-        const response = await fetch('/.netlify/functions/get-html', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: selectedFlight.players_url }),
-        });
+        try {
+            const response = await fetch('/.netlify/functions/get-html', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: selectedFlight.players_url }),
+            });
 
-        if (!response.ok) throw new Error(`Failed to fetch player data: ${response.statusText}`);
+            if (!response.ok) throw new Error(`Failed to fetch player data: ${response.statusText}`);
 
-        const result = await response.json();
-        const fullHtml = result.data;
-        setPlayerData(extractPlayerData(fullHtml));
-    }, [selectedFlight?.players_url]);
+            const result = await response.json();
+            const fullHtml = result.data;
+            setPlayerData(extractPlayerData(fullHtml));
+        } catch (error) {
+            console.error("Error fetching players:", error);
+        }
+    }, [selectedFlight]);
 
     // Fetch Schedule
     const fetchSchedule = useCallback(async () => {
@@ -224,13 +278,13 @@ const LeagueSchedulesModal: React.FC = () => {
         } finally {
             setScheduleLoading(false);
         }
-    }, [selectedFlight?.schedule_url]);
+    }, [selectedFlight?.schedule_url, extractScheduleData]);
 
     // Fetch Schedule and Players when selectedFlight Changes
     useEffect(() => {
         fetchSchedule();
         fetchPlayers();
-    }, [fetchSchedule, fetchPlayers]);
+    }, [fetchSchedule, fetchPlayers, matchFilter]);
 
     // Handle Flight Change
     const handleFlightChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -291,11 +345,28 @@ const LeagueSchedulesModal: React.FC = () => {
                                 </ul>
                                 <p className='italic font-sm text-[var(--text-highlight)]'>Click on a match to see match information</p>
                                 <hr />
+                                {selectedFlight && (
+                                    <div className="mt-4">
+                                        <div className='text-red-500 text-center'>Note: The testing date is set to 11/11/2024</div>
+                                        <label htmlFor="matchFilter" className="block text-sm font-medium">Filter Matches:</label>
+                                        <select
+                                            id="matchFilter"
+                                            className="mb-8 p-2 w-full max-w-[300px] border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                                            onChange={(e) => setMatchFilter(e.target.value as 'upcoming' | 'next' | 'all')}
+                                            value={matchFilter}
+                                        >
+                                            <option value="upcoming">Upcoming Matches</option>
+                                            <option value="next">Next Match</option>
+                                            <option value="all">All Matches</option>
+                                        </select>
+                                    </div>
+                                )}
                             </div>
+
                             {Object.entries(matchupsByDate).map(([date, matchups], index) => (
-                                <div key={index} className="flex flex-col bg-[var(--card-background)] border-l-4 border-[var(--card-highlight)] p-4 mb-4">
+                                <div key={index} className="flex flex-col bg-[var(--card-background)] border-l-4 border-[var(--card-highlight)] p-4 mb-4 rounded-lg">
                                     <h3 className="text-lg font-medium text-[var(--card-title)] mb-2">
-                                        Week {index + 1} - {date}
+                                        Week {weekNumbers[date] ??  'Unknown'} - {date}
                                     </h3>
                                     <table className="w-full border-collapse">
                                         <thead>

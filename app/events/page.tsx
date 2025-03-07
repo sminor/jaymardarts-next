@@ -155,6 +155,7 @@ const EventsPage = () => {
                         {/* Left: Date Range & Location Filters */}
                         <div className="flex flex-col w-auto">
                             <div className="w-full max-w-[200px]">
+                                <label className="block text-sm font-medium">Filter Events:</label>
                                 <select
                                     onChange={(e) => setDateRange(e.target.value)}
                                     value={dateRange}
