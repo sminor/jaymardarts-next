@@ -8,12 +8,13 @@ import Modal from '@/components/Modal';
 import LeagueSignupForm from './leagueSignupModal';
 import LeagueSchedulesModal from './leagueSchedulesModal';
 import LeagueStandingsModal from './leagueStandingsModal';
-import { FaUsers, FaDollarSign, FaCalendarAlt, FaTrophy } from 'react-icons/fa';
+import { leagueInfo, LeagueInfoContent } from './leagueInfoModal';
+import { FaUsers, FaInfoCircle, FaCalendarAlt, FaTrophy } from 'react-icons/fa';
 
 const Leagues = () => {
     // State variables for modals
     const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
-    const [isFeesModalOpen, setIsFeesModalOpen] = useState(false);
+    const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
     const [isSchedulesModalOpen, setIsSchedulesModalOpen] = useState(false);
     const [isStandingsModalOpen, setIsStandingsModalOpen] = useState(false);
 
@@ -50,11 +51,11 @@ const Leagues = () => {
                         </div>
                         <div className="flex-1">
                             <Button
-                                icon={<FaDollarSign size={32} aria-hidden="true" />}
+                                icon={<FaInfoCircle size={32} aria-hidden="true" />}
                                 aria-label="View League Fees"
-                                onClick={() => setIsFeesModalOpen(true)}
+                                onClick={() => setIsInfoModalOpen(true)}
                             >
-                                Fees
+                                Info
                             </Button>
                         </div>
                         <div className="flex-1">
@@ -83,15 +84,15 @@ const Leagues = () => {
                     isOpen={isSignupModalOpen}
                     onClose={() => setIsSignupModalOpen(false)}
                     title="League Sign-up"
-                    content={<LeagueSignupForm closeModal={() => setIsSignupModalOpen(false)} />} // Render the form component here
+                    content={<LeagueSignupForm closeModal={() => setIsSignupModalOpen(false)} />}
                 />
 
                 {/* Fees Modal */}
                 <Modal
-                    isOpen={isFeesModalOpen}
-                    onClose={() => setIsFeesModalOpen(false)}
-                    title="League Fees"
-                    content={<p>Fees information will go here.</p>}
+                    isOpen={isInfoModalOpen}
+                    onClose={() => setIsInfoModalOpen(false)}
+                    title="League Information"
+                    content={<LeagueInfoContent items={leagueInfo} />}
                 />
 
                 {/* Schedules Modal */}
