@@ -2,7 +2,7 @@
 import Image from 'next/image';
 import Footer from '@/components/Footer';
 import Button from '@/components/Button';
-import { FaMapMarkerAlt, FaCalendarAlt, FaUsers, FaChartBar } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaBullseye, FaUsers, FaChartBar } from 'react-icons/fa';
 import Announcement from '@/components/Announcement';
 
 const Home = () => {
@@ -38,7 +38,7 @@ const Home = () => {
               </Button>
             </div>
             <div className="flex-1">
-              <Button href="/events" icon={<FaCalendarAlt size={32} aria-hidden="true" />} aria-label="View Events">
+              <Button href="/events" icon={<FaBullseye size={32} aria-hidden="true" />} aria-label="View Events">
                 Events
               </Button>
             </div>

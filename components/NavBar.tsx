@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
-import { FaMapMarkerAlt, FaCalendarAlt, FaUsers, FaChartBar, FaHome } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaUsers, FaChartBar, FaHome, FaBullseye } from 'react-icons/fa';
 import Button from '@/components/Button';
 
 interface NavBarProps {
@@ -12,7 +12,7 @@ const NavBar: React.FC<NavBarProps> = ({ currentPage }) => {
   const navLinks = [
     { href: '/', label: 'Home', icon: FaHome },
     { href: '/locations', label: 'Locations', icon: FaMapMarkerAlt },
-    { href: '/events', label: 'Events', icon: FaCalendarAlt },
+    { href: '/events', label: 'Events', icon: FaBullseye },
     { href: '/leagues', label: 'Leagues', icon: FaUsers },
     { href: '/stats', label: 'Stats', icon: FaChartBar },
   ];
