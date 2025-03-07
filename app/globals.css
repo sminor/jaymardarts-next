@@ -71,6 +71,10 @@
   --modal-close-background: var(--color2);
   --modal-scrollbar-color: var(--color3);
 
+  /* Table Colors */
+  --table-odd-row: var(--color1);
+  --table-even-row: var(--color2);
+
 }
 
 

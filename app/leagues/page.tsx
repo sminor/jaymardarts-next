@@ -6,6 +6,7 @@ import Announcement from '@/components/Announcement';
 import Button from '@/components/Button';
 import Modal from '@/components/Modal';
 import LeagueSignupForm from './leagueSignupModal'; // Import the new component
+import LeagueSchedulesModal from './leagueSchedulesModal';
 import { FaUsers, FaDollarSign, FaCalendarAlt, FaTrophy } from 'react-icons/fa'; // Import icons
 
 const Leagues = () => {
@@ -97,7 +98,7 @@ const Leagues = () => {
                     isOpen={isSchedulesModalOpen}
                     onClose={() => setIsSchedulesModalOpen(false)}
                     title="League Schedules"
-                    content={<p>Schedules information will go here.</p>}
+                    content={<LeagueSchedulesModal />}
                 />
 
                 {/* Standings Modal */}

@@ -158,7 +158,7 @@ const EventsPage = () => {
                                 <select
                                     onChange={(e) => setDateRange(e.target.value)}
                                     value={dateRange}
-                                    className="bg-[var(--select-background)] text-[var(--select-text)] border-2 border-[var(--select-border)] rounded-md px-2 py-1 focus:outline-none w-full max-w-[200px]"
+                                    className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none max-w-[200px]"
                                 >
                                     <option value="thisMonth">This Month</option>
                                     <option value="thisWeek">This Week</option>
@@ -171,7 +171,7 @@ const EventsPage = () => {
                                 <select
                                     onChange={(e) => setLocationFilter(e.target.value)}
                                     value={locationFilter}
-                                    className="bg-[var(--select-background)] text-[var(--select-text)] border-2 border-[var(--select-border)] rounded-md px-2 py-1 focus:outline-none w-full max-w-[200px]"
+                                    className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none max-w-[200px]"
                                 >
                                     {uniqueLocations.map(location => (
                                         <option key={location} value={location}>
@@ -189,7 +189,7 @@ const EventsPage = () => {
                                 id="showPastEvents"
                                 checked={showPastEvents}
                                 onChange={() => setShowPastEvents(!showPastEvents)}
-                                className="appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-md checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
+                                className="appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-sm checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
                             />
                             <label htmlFor="showPastEvents" className="ml-2 text-[var(--select-text)] cursor-pointer">
                                 Past Events

@@ -324,13 +324,13 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                     />
                     {phoneError && <p className="text-red-500 text-sm">{phoneError}</p>}
                 </div>
-                <div>
+                <div className='items-center flex'>
                     <input
                         type="checkbox"
                         id="captain_paid_nda"
                         checked={formData.captain_paid_nda}
                         onChange={handleInputChange}
-                        className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-md checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
+                        className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-sm checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
                     />
                     <label htmlFor="captain_paid_nda">Captain has paid the yearly NDA sanction fee.</label>
                 </div>
@@ -383,13 +383,13 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                     />
                     {phoneError && <p className="text-red-500 text-sm">{phoneError}</p>}
                 </div>
-                <div>
+                <div className='items-center flex'>
                     <input
                         type="checkbox"
                         id="teammate_paid_nda"
                         checked={formData.teammate_paid_nda}
                         onChange={handleInputChange}
-                        className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-md checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
+                        className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-sm checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
                     />
                     <label htmlFor="teammate_paid_nda">Teammate has paid the yearly NDA sanction fee.</label>
                 </div>
@@ -449,8 +449,8 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                 {/* Play Preference */}
                 <div>
                     <label className="block text-sm font-medium">I prefer to play</label>
-                    <div className="mt-1 flex gap-4">
-                        <div>
+                    <div className="mt-1 flex gap-8">
+                        <div className='items-center flex'>
                             <input
                                 type="radio"
                                 id="remote"
@@ -463,7 +463,7 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                             />
                             <label htmlFor="remote">Remote</label>
                         </div>
-                        <div>
+                        <div className='items-center flex'>
                             <input
                                 type="radio"
                                 id="inPerson"
@@ -507,7 +507,7 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
 
                 {/* Terms and Conditions */}
                 <div className="flex items-center">
-                    <input type="checkbox" id="terms" required className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-md checked:bg-[var(--checkbox-checkmark)] focus:outline-none" checked={isTermsChecked} onChange={() => setIsTermsChecked(!isTermsChecked)} />
+                    <input type="checkbox" id="terms" required className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-sm checked:bg-[var(--checkbox-checkmark)] focus:outline-none" checked={isTermsChecked} onChange={() => setIsTermsChecked(!isTermsChecked)} />
                     <label htmlFor="terms" className="text-sm font-medium">I agree to the terms provided above</label>
                 </div>
 
@@ -515,8 +515,8 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                 <h3 className='font-bold'>Payment Method</h3>
                 <div>
                     <label className="block text-sm font-medium"></label>
-                    <div className="mt-1 flex gap-4">
-                        <div>
+                    <div className="mt-1 flex gap-8">
+                        <div className='items-center flex'>
                             <input
                                 type="radio"
                                 id="venmo"
@@ -529,7 +529,7 @@ const LeagueSignupForm: React.FC<{ closeModal: () => void }> = ({ closeModal }) 
                             />
                             <label htmlFor="venmo">Venmo</label>
                         </div>
-                        <div>
+                        <div className='items-center flex'>
                             <input
                                 type="radio"
                                 id="paypal"
