@@ -337,7 +337,7 @@ const LeagueSchedulesModal: React.FC = () => {
                         <label htmlFor="leagueSelect" className="block text-sm font-medium">Select a Flight:</label>
                         <select
                             id="leagueSelect"
-                            className="mt-1 p-2 w-full border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                            className="mt-1 p-2 border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
                             onChange={handleFlightChange}
                             value={selectedFlight ? `${selectedFlight.leagueName} - ${selectedFlight.flightName}` : ""}
                         >

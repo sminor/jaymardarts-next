@@ -5,9 +5,10 @@ import Footer from '@/components/Footer';
 import Announcement from '@/components/Announcement';
 import Button from '@/components/Button';
 import Modal from '@/components/Modal';
-import LeagueSignupForm from './leagueSignupModal'; // Import the new component
+import LeagueSignupForm from './leagueSignupModal';
 import LeagueSchedulesModal from './leagueSchedulesModal';
-import { FaUsers, FaDollarSign, FaCalendarAlt, FaTrophy } from 'react-icons/fa'; // Import icons
+import LeagueStandingsModal from './leagueStandingsModal';
+import { FaUsers, FaDollarSign, FaCalendarAlt, FaTrophy } from 'react-icons/fa';
 
 const Leagues = () => {
     // State variables for modals
@@ -106,7 +107,7 @@ const Leagues = () => {
                     isOpen={isStandingsModalOpen}
                     onClose={() => setIsStandingsModalOpen(false)}
                     title="League Standings"
-                    content={<p>Standings information will go here.</p>}
+                    content={<LeagueStandingsModal />}
                 />
             </div> {/* End of Global Wrapper */}
 
