@@ -58,8 +58,8 @@ const LeagueSchedulesModal: React.FC = () => {
     const [expandedMatchups, setExpandedMatchups] = useState<Record<string, Record<number, boolean>>>({});
     const [matchFilter, setMatchFilter] = useState<'upcoming' | 'next' | 'all'>('upcoming');
     const [weekNumbers, setWeekNumbers] = useState<Record<string, number>>({});
-
-
+    const [teamFilter, setTeamFilter] = useState<string>('all');
+    const [availableTeams, setAvailableTeams] = useState<string[]>([]);
 
     // Fetch Leagues and Flights
     useEffect(() => {
@@ -118,6 +118,7 @@ const LeagueSchedulesModal: React.FC = () => {
         const $ = cheerio.load(fullHtml);
         const table = $('table.report:nth-of-type(2)');
         const matchupsByDate: Record<string, MatchScheduleData[]> = {};
+        const uniqueTeams = new Set<string>(); // Store unique team names
         
         let currentDate = "";
     
@@ -132,6 +133,9 @@ const LeagueSchedulesModal: React.FC = () => {
                     const atLocation = $(cells[4]).text().trim();
     
                     if (dateText) currentDate = dateText;
+    
+                    if (homeTeam) uniqueTeams.add(homeTeam); // Track home team
+                    if (awayTeam) uniqueTeams.add(awayTeam); // Track away team
     
                     if (homeTeam || awayTeam) {
                         if (!matchupsByDate[currentDate]) {
@@ -155,24 +159,33 @@ const LeagueSchedulesModal: React.FC = () => {
                 newWeekNumbers[date] = index + 1; // Assign fixed week numbers based on sorted order
             });
     
-            setWeekNumbers(newWeekNumbers); // Store week numbers in state so JSX can access it
+            setWeekNumbers(newWeekNumbers); // Store week numbers in state
     
             // **Standardize today's date format to match dataset (M/D/YYYY)**
             const today = new Date('2024-11-11'); // Fake today's date for testing
-            const todayFormatted = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`; 
+            const todayFormatted = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
     
             const filteredMatchups: Record<string, MatchScheduleData[]> = {};
     
             // **Filter matches based on selection**
             Object.entries(matchupsByDate).forEach(([date, matches]) => {
+                // Apply date filtering (matchFilter)
                 if (matchFilter === 'all' || (matchFilter === 'upcoming' && date >= todayFormatted)) {
-                    filteredMatchups[date] = matches;
+                    // Apply team filtering (teamFilter)
+                    const teamFilteredMatches =
+                        teamFilter === 'all'
+                            ? matches // Show all matches if "All Teams" is selected
+                            : matches.filter(match => match.homeTeam === teamFilter || match.awayTeam === teamFilter); // Show only matches involving the selected team
+            
+                    if (teamFilteredMatches.length > 0) {
+                        filteredMatchups[date] = teamFilteredMatches; // Add only if matches exist after filtering
+                    }
                 }
             });
+            
     
             // **Find the Next Match without modifying week structure**
             if (matchFilter === 'next') {
-    
                 // Find the first date that is greater than or equal to today
                 const nextMatchDate = Object.keys(matchupsByDate)
                     .filter(date => date >= todayFormatted) // Compare using the same format
@@ -197,11 +210,17 @@ const LeagueSchedulesModal: React.FC = () => {
                 });
             });
             setExpandedMatchups(newExpandedMatchups);
+    
+            // **Store available teams for filtering**
+            // Sort teams alphabetically but keep "All Teams" at the top
+            const sortedTeams = Array.from(uniqueTeams).sort((a, b) => a.localeCompare(b));
+            setAvailableTeams(['all', ...sortedTeams]);
+
+    
         } else {
             setScheduleError("No data table found on page.");
         }
-    }, [matchFilter]); // Added `matchFilter` as a dependency
-    
+    }, [matchFilter, teamFilter]); // Added `matchFilter` as a dependency
     
     
 
@@ -351,7 +370,7 @@ const LeagueSchedulesModal: React.FC = () => {
                                         <label htmlFor="matchFilter" className="block text-sm font-medium">Filter Matches:</label>
                                         <select
                                             id="matchFilter"
-                                            className="mb-8 p-2 w-full max-w-[300px] border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                                            className="p-2 w-full max-w-[300px] border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
                                             onChange={(e) => setMatchFilter(e.target.value as 'upcoming' | 'next' | 'all')}
                                             value={matchFilter}
                                         >
@@ -361,6 +380,24 @@ const LeagueSchedulesModal: React.FC = () => {
                                         </select>
                                     </div>
                                 )}
+                                {selectedFlight && availableTeams.length > 1 && (
+                                    <div className="mt-4">
+                                        
+                                        <select
+                                            id="teamFilter"
+                                            className="mb-8 p-2 w-full max-w-[300px] border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                                            onChange={(e) => setTeamFilter(e.target.value)}
+                                            value={teamFilter}
+                                        >
+                                            {availableTeams.map((team, index) => (
+                                                <option key={index} value={team}>
+                                                    {team === 'all' ? 'All Teams' : team}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
                             </div>
 
                             {Object.entries(matchupsByDate).map(([date, matchups], index) => (
