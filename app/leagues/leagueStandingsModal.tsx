@@ -108,8 +108,6 @@ const LeagueStandingsModal: React.FC = () => {
             return [];
         }
     
-        console.log(`Found "${sectionTitle}" at line index: ${startIndex}`);
-    
         // Extract only the relevant part of the table
         const tableLines = lines.slice(startIndex).filter(line => line.includes('|')); // Get lines with '|'
     
@@ -122,8 +120,6 @@ const LeagueStandingsModal: React.FC = () => {
             .split('|')
             .map(e => e.trim())
             .filter(Boolean); // Remove empty headers
-    
-        console.log(`Extracted Headers for "${sectionTitle}":`, headers); // Debugging
     
         const tableData: DynamicTableRow[] = []; // Store parsed rows
     
@@ -146,7 +142,6 @@ const LeagueStandingsModal: React.FC = () => {
             }
         });
     
-        console.log(`Parsed Data for "${sectionTitle}":`, tableData); // Debugging
         return tableData;
     };
     
@@ -254,7 +249,7 @@ const LeagueStandingsModal: React.FC = () => {
                                 {headers.map((header) => (
                                     <th
                                         key={header}
-                                        className="text-left font-medium text-[var(--card-text)] p-2 cursor-pointer"
+                                        className="text-left font-medium text-[var(--card-text)] p-2 cursor-pointer whitespace-nowrap"
                                         onClick={() => handleSort(header)}
                                     >
                                         {header} {sortColumn === header ? (sortOrder === 'asc' ? '▲' : '▼') : ''}

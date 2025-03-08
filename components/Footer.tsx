@@ -7,7 +7,11 @@ const Footer = () => {
       <div className="container max-w-screen-xl mx-auto">
         <div className="flex justify-center space-x-6 mb-2 text-sm">
           {[
-            { href: '#', icon: FaEnvelope, label: 'Contact Us' },
+            { 
+              href: 'mailto:jaymardarts@gmail.com', 
+              icon: FaEnvelope, 
+              label: 'Contact Us' 
+            },
             {
               href: 'https://www.facebook.com/jaymardarts',
               icon: FaFacebookSquare,
@@ -15,6 +19,7 @@ const Footer = () => {
             },
             { href: '#', icon: FaLock, label: 'Admin Login' },
           ].map(({ href, icon: Icon, label }, index) => (
+            
             <Link
               key={index}
               href={href}
