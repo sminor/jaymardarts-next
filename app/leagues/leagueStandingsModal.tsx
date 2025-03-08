@@ -235,7 +235,7 @@ const LeagueStandingsModal: React.FC = () => {
                 setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); // Toggle order
             } else {
                 setSortColumn(column);
-                setSortOrder('asc'); // Default to ascending on new column
+                setSortOrder('desc'); // Default to ascending on new column
             }
         };
     
