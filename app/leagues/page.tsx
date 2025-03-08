@@ -8,7 +8,7 @@ import Modal from '@/components/Modal';
 import LeagueSignupForm from './leagueSignupModal';
 import LeagueSchedulesModal from './leagueSchedulesModal';
 import LeagueStandingsModal from './leagueStandingsModal';
-import { leagueInfo, LeagueInfoContent } from './leagueInfoModal';
+import LeagueInfoContent from './leagueInfoModal';
 import { FaUsers, FaInfoCircle, FaCalendarAlt, FaTrophy } from 'react-icons/fa';
 
 const Leagues = () => {
@@ -92,7 +92,7 @@ const Leagues = () => {
                     isOpen={isInfoModalOpen}
                     onClose={() => setIsInfoModalOpen(false)}
                     title="League Information"
-                    content={<LeagueInfoContent items={leagueInfo} />}
+                    content={<LeagueInfoContent />}
                 />
 
                 {/* Schedules Modal */}

@@ -7,9 +7,9 @@ import Button from '@/components/Button';
 import Footer from '@/components/Footer';
 import Announcement from '@/components/Announcement';
 import Modal from '@/components/Modal';
-import { faqInfo, FAQContent } from './eventsFAQModal';
-import { newPlayerInfo, NewPlayerContent } from './eventsNewPlayerModal';
-import { conductCodeInfo, ConductCodeContent } from './eventsConductCodeModal';
+import EventsFAQContent from './eventsFAQModal';
+import NewPlayerContent from './eventsNewPlayerModal';
+import ConductCodeContent from './eventsConductCodeModal';
 import { FaQuestionCircle, FaUserPlus, FaBook } from 'react-icons/fa'; // Import icons
 
 // Type Definitions
@@ -129,7 +129,7 @@ const EventsPage = () => {
                   isOpen={isNewPlayerModalOpen}
                   onClose={() => setIsNewPlayerModalOpen(false)}
                   title="New Player Information"
-                  content={<NewPlayerContent items={newPlayerInfo} />}
+                  content={<NewPlayerContent />}
                 />
 
                 {/* Modal Component with Code of Conduct Content */}
@@ -137,7 +137,7 @@ const EventsPage = () => {
                   isOpen={isCodeOfConductModalOpen}
                   onClose={() => setIsCodeOfConductModalOpen(false)}
                   title="Code of Conduct"
-                  content={<ConductCodeContent items={conductCodeInfo} />}
+                  content={<ConductCodeContent />}
                 />                 
 
                 {/* Modal Component with FAQ Content */}
@@ -145,7 +145,7 @@ const EventsPage = () => {
                     isOpen={isFAQModalOpen}
                     onClose={() => setIsFAQModalOpen(false)}
                     title="Event FAQs"
-                    content={<FAQContent items={faqInfo} />}
+                    content={<EventsFAQContent />}
                 />
 
                 {/* Filters Section */}
