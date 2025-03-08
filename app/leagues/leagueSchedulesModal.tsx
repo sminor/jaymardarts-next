@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/utils/supabaseClient';
 import * as cheerio from 'cheerio';
 
@@ -32,6 +32,7 @@ interface LeagueFlightOption {
 interface PlayerData {
     name: string;
 }
+
 interface TeamData {
     team: string;
     players: PlayerData[];
@@ -43,8 +44,129 @@ interface MatchScheduleData {
     at: string | null;
 }
 
+// Filter Controls Component
+const FilterControls = React.memo(function FilterControls({
+    matchFilter,
+    teamFilter,
+    availableTeams,
+    onMatchFilterChange,
+    onTeamFilterChange
+}: {
+    matchFilter: 'upcoming' | 'next' | 'all';
+    teamFilter: string;
+    availableTeams: string[];
+    onMatchFilterChange: (value: 'upcoming' | 'next' | 'all') => void;
+    onTeamFilterChange: (value: string) => void;
+}) {
+    return (
+        <div className="mt-4">
+            <div className='text-red-500 text-center'>Note: The testing date is set to 11/11/2024</div>
+            <label htmlFor="matchFilter" className="block text-sm font-medium">Filter Matches:</label>
+            <select
+                id="matchFilter"
+                className="p-2 w-full max-w-[300px] border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                onChange={(e) => onMatchFilterChange(e.target.value as 'upcoming' | 'next' | 'all')}
+                value={matchFilter}
+            >
+                <option value="upcoming">Upcoming Matches</option>
+                <option value="next">Next Match</option>
+                <option value="all">All Matches</option>
+            </select>
+
+            {availableTeams.length > 1 && (
+                <div className="mt-4">
+                    <select
+                        id="teamFilter"
+                        className="mb-8 p-2 w-full max-w-[300px] border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
+                        onChange={(e) => onTeamFilterChange(e.target.value)}
+                        value={teamFilter}
+                    >
+                        {availableTeams.map((team) => (
+                            <option key={team} value={team}>
+                                {team === 'all' ? 'All Teams' : team}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            )}
+        </div>
+    );
+});
+
+// Schedule Display Component
+const ScheduleDisplay = React.memo(function ScheduleDisplay({
+    matchupsByDate,
+    playerData,
+    weekNumbers,
+    expandedMatchups,
+    onToggleMatchup
+}: {
+    matchupsByDate: Record<string, MatchScheduleData[]>;
+    playerData: TeamData[];
+    weekNumbers: Record<string, number>;
+    expandedMatchups: Record<string, Record<number, boolean>>;
+    onToggleMatchup: (date: string, index: number) => void;
+}) {
+    return (
+        <div>
+            {Object.entries(matchupsByDate).map(([date, matchups], index) => (
+                <div key={index} className="flex flex-col bg-[var(--card-background)] border-l-4 border-[var(--card-highlight)] p-4 mb-4 rounded-lg">
+                    <h3 className="text-lg font-medium text-[var(--card-title)] mb-2">
+                        Week {weekNumbers[date] ?? 'Unknown'} - {date}
+                    </h3>
+                    <table className="w-full border-collapse">
+                        <thead>
+                            <tr className="border-b-2 border-[var(--card-highlight)]">
+                                <th className="text-left font-medium text-[var(--card-text)] p-2 sm:w-[15%]">Home</th>
+                                <th className="text-center font-medium text-[var(--card-text)] p-2 sm:w-[10%]"></th>
+                                <th className="text-left font-medium text-[var(--card-text)] p-2">Away</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {matchups.map((matchup, i) => {
+                                const homeTeamPlayers = (playerData.find(team => team.team === matchup.homeTeam)?.players || []).slice(0, 2);
+                                const awayTeamPlayers = (playerData.find(team => team.team === matchup.awayTeam)?.players || []).slice(0, 2);
+                                return (
+                                    <React.Fragment key={i}>
+                                        <tr
+                                            className="cursor-pointer odd:bg-[var(--table-odd-row)] even:bg-[var(--table-even-row)] border-none transition-all"
+                                            onClick={() => onToggleMatchup(date, i)}
+                                        >
+                                            <td className="text-[var(--card-text)] p-2 whitespace-nowrap">
+                                                {matchup.homeTeam || "TBD"}
+                                                {expandedMatchups[date]?.[i] && homeTeamPlayers.length > 0 && (
+                                                    <div className="mt-1 text-xs">
+                                                        {homeTeamPlayers.map((player, playerIndex) => (
+                                                            <div key={playerIndex} className={"before:content-['↳'] before:mr-1"}>{player.name}</div>
+                                                        ))}
+                                                        <div className="mt-4 italic">@{matchup.at}</div>
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="text-center">vs.</td>
+                                            <td className="text-[var(--card-text)] p-2 whitespace-nowrap">
+                                                {matchup.awayTeam || "TBD"}
+                                                {expandedMatchups[date]?.[i] && awayTeamPlayers.length > 0 && (
+                                                    <div className="mt-1 text-xs">
+                                                        {awayTeamPlayers.map((player, playerIndex) => (
+                                                            <div key={playerIndex} className={"before:content-['↳'] before:mr-1"}>{player.name}</div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    </React.Fragment>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            ))}
+        </div>
+    );
+});
+
 const LeagueSchedulesModal: React.FC = () => {
-    // State Variables
     const [leagues, setLeagues] = useState<League[]>([]);
     const [leagueFlights, setLeagueFlights] = useState<LeagueFlight[]>([]);
     const [selectedFlight, setSelectedFlight] = useState<LeagueFlightOption | null>(null);
@@ -53,7 +175,7 @@ const LeagueSchedulesModal: React.FC = () => {
     const [leagueOptions, setLeagueOptions] = useState<LeagueFlightOption[]>([]);
     const [scheduleLoading, setScheduleLoading] = useState<boolean>(false);
     const [scheduleError, setScheduleError] = useState<string | null>(null);
-    const [matchupsByDate, setMatchupsByDate] = useState<Record<string, MatchScheduleData[]>>({});
+    const [rawMatchups, setRawMatchups] = useState<Record<string, MatchScheduleData[]>>({});
     const [playerData, setPlayerData] = useState<TeamData[]>([]);
     const [expandedMatchups, setExpandedMatchups] = useState<Record<string, Record<number, boolean>>>({});
     const [matchFilter, setMatchFilter] = useState<'upcoming' | 'next' | 'all'>('upcoming');
@@ -61,7 +183,6 @@ const LeagueSchedulesModal: React.FC = () => {
     const [teamFilter, setTeamFilter] = useState<string>('all');
     const [availableTeams, setAvailableTeams] = useState<string[]>([]);
 
-    // Fetch Leagues and Flights
     useEffect(() => {
         const fetchLeaguesAndFlights = async () => {
             setLoading(true);
@@ -94,7 +215,6 @@ const LeagueSchedulesModal: React.FC = () => {
         fetchLeaguesAndFlights();
     }, []);
 
-    // Map Flights to Options
     useEffect(() => {
         if (leagues.length > 0 && leagueFlights.length > 0) {
             const newOptions = leagueFlights.map((flight) => {
@@ -113,12 +233,40 @@ const LeagueSchedulesModal: React.FC = () => {
         }
     }, [leagues, leagueFlights]);
 
-    // Extract Schedule Data
+    const filterMatches = useCallback((matches: Record<string, MatchScheduleData[]>) => {
+        const today = new Date('2024-11-11');
+        const todayFormatted = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+        
+        const filteredMatchups: Record<string, MatchScheduleData[]> = {};
+
+        Object.entries(matches).forEach(([date, matchups]) => {
+            if (matchFilter === 'all' || (matchFilter === 'upcoming' && date >= todayFormatted)) {
+                const teamFilteredMatches = teamFilter === 'all'
+                    ? matchups
+                    : matchups.filter(match => match.homeTeam === teamFilter || match.awayTeam === teamFilter);
+                
+                if (teamFilteredMatches.length > 0) {
+                    filteredMatchups[date] = teamFilteredMatches;
+                }
+            }
+        });
+
+        if (matchFilter === 'next') {
+            const nextMatchDate = Object.keys(matches)
+                .filter(date => date >= todayFormatted)
+                .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
+            
+            return nextMatchDate ? { [nextMatchDate]: matches[nextMatchDate] } : {};
+        }
+        
+        return filteredMatchups;
+    }, [matchFilter, teamFilter]);
+
     const extractScheduleData = useCallback((fullHtml: string) => {
         const $ = cheerio.load(fullHtml);
         const table = $('table.report:nth-of-type(2)');
         const matchupsByDate: Record<string, MatchScheduleData[]> = {};
-        const uniqueTeams = new Set<string>(); // Store unique team names
+        const uniqueTeams = new Set<string>();
         
         let currentDate = "";
     
@@ -134,8 +282,8 @@ const LeagueSchedulesModal: React.FC = () => {
     
                     if (dateText) currentDate = dateText;
     
-                    if (homeTeam) uniqueTeams.add(homeTeam); // Track home team
-                    if (awayTeam) uniqueTeams.add(awayTeam); // Track away team
+                    if (homeTeam) uniqueTeams.add(homeTeam);
+                    if (awayTeam) uniqueTeams.add(awayTeam);
     
                     if (homeTeam || awayTeam) {
                         if (!matchupsByDate[currentDate]) {
@@ -151,80 +299,22 @@ const LeagueSchedulesModal: React.FC = () => {
                 }
             });
     
-            // **Assign Fixed Week Numbers**
             const datesSorted = Object.keys(matchupsByDate).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-    
             const newWeekNumbers: Record<string, number> = {};
             datesSorted.forEach((date, index) => {
-                newWeekNumbers[date] = index + 1; // Assign fixed week numbers based on sorted order
+                newWeekNumbers[date] = index + 1;
             });
-    
-            setWeekNumbers(newWeekNumbers); // Store week numbers in state
-    
-            // **Standardize today's date format to match dataset (M/D/YYYY)**
-            const today = new Date('2024-11-11'); // Fake today's date for testing
-            const todayFormatted = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
-    
-            const filteredMatchups: Record<string, MatchScheduleData[]> = {};
-    
-            // **Filter matches based on selection**
-            Object.entries(matchupsByDate).forEach(([date, matches]) => {
-                // Apply date filtering (matchFilter)
-                if (matchFilter === 'all' || (matchFilter === 'upcoming' && date >= todayFormatted)) {
-                    // Apply team filtering (teamFilter)
-                    const teamFilteredMatches =
-                        teamFilter === 'all'
-                            ? matches // Show all matches if "All Teams" is selected
-                            : matches.filter(match => match.homeTeam === teamFilter || match.awayTeam === teamFilter); // Show only matches involving the selected team
-            
-                    if (teamFilteredMatches.length > 0) {
-                        filteredMatchups[date] = teamFilteredMatches; // Add only if matches exist after filtering
-                    }
-                }
-            });
-            
-    
-            // **Find the Next Match without modifying week structure**
-            if (matchFilter === 'next') {
-                // Find the first date that is greater than or equal to today
-                const nextMatchDate = Object.keys(matchupsByDate)
-                    .filter(date => date >= todayFormatted) // Compare using the same format
-                    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0]; // Get the closest match
-    
-                if (nextMatchDate) {
-                    setMatchupsByDate({ [nextMatchDate]: matchupsByDate[nextMatchDate] });
-                } else {
-                    console.log("No upcoming matches found!");
-                    setMatchupsByDate({});
-                }
-            } else {
-                setMatchupsByDate(filteredMatchups);
-            }
-    
-            // **Preserve original week numbers by expanding all dates**
-            const newExpandedMatchups: Record<string, Record<number, boolean>> = {};
-            Object.keys(matchupsByDate).forEach((date) => {
-                newExpandedMatchups[date] = {};
-                matchupsByDate[date].forEach((_, index) => {
-                    newExpandedMatchups[date][index] = false;
-                });
-            });
-            setExpandedMatchups(newExpandedMatchups);
-    
-            // **Store available teams for filtering**
-            // Sort teams alphabetically but keep "All Teams" at the top
-            const sortedTeams = Array.from(uniqueTeams).sort((a, b) => a.localeCompare(b));
-            setAvailableTeams(['all', ...sortedTeams]);
 
-    
+            setWeekNumbers(newWeekNumbers);
+            setRawMatchups(matchupsByDate);
+            setAvailableTeams(['all', ...Array.from(uniqueTeams).sort()]);
         } else {
             setScheduleError("No data table found on page.");
         }
-    }, [matchFilter, teamFilter]); // Added `matchFilter` as a dependency
-    
-    
+    }, []);
 
-    // Extract Player Data
+    const filteredMatchups = useMemo(() => filterMatches(rawMatchups), [rawMatchups, filterMatches]);
+
     const extractPlayerData = (fullHtml: string): TeamData[] => {
         const $ = cheerio.load(fullHtml);
         const teamDataArray: TeamData[] = [];
@@ -251,10 +341,9 @@ const LeagueSchedulesModal: React.FC = () => {
         return teamDataArray;
     };
 
-    // Fetch Players
     const fetchPlayers = useCallback(async () => {
         if (!selectedFlight || !selectedFlight.players_url) {
-            return; // Prevent fetching if no flight is selected
+            return;
         }
 
         setPlayerData([]);
@@ -275,7 +364,6 @@ const LeagueSchedulesModal: React.FC = () => {
         }
     }, [selectedFlight]);
 
-    // Fetch Schedule
     const fetchSchedule = useCallback(async () => {
         if (!selectedFlight?.schedule_url) return;
         setScheduleLoading(true);
@@ -299,31 +387,36 @@ const LeagueSchedulesModal: React.FC = () => {
         }
     }, [selectedFlight?.schedule_url, extractScheduleData]);
 
-    // Fetch Schedule and Players when selectedFlight Changes
     useEffect(() => {
         fetchSchedule();
         fetchPlayers();
-    }, [fetchSchedule, fetchPlayers, matchFilter]);
+    }, [fetchSchedule, fetchPlayers]);
 
-    // Handle Flight Change
-    const handleFlightChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const handleFlightChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedValue = event.target.value;
         const selected = leagueOptions.find(
             (option) => `${option.leagueName} - ${option.flightName}` === selectedValue
         );
         setSelectedFlight(selected || null);
-    };
+    }, [leagueOptions]);
 
-    // Toggle Matchup Expansion
-    const toggleMatchupExpansion = (date: string, index: number) => {
-        setExpandedMatchups((prev) => ({
+    const toggleMatchupExpansion = useCallback((date: string, index: number) => {
+        setExpandedMatchups(prev => ({
             ...prev,
             [date]: {
                 ...prev[date],
-                [index]: !prev[date][index],
-            },
+                [index]: !prev[date]?.[index]
+            }
         }));
-    };
+    }, []);
+
+    const handleMatchFilterChange = useCallback((value: 'upcoming' | 'next' | 'all') => {
+        setMatchFilter(value);
+    }, []);
+
+    const handleTeamFilterChange = useCallback((value: string) => {
+        setTeamFilter(value);
+    }, []);
 
     return (
         <div className="p-4">
@@ -364,95 +457,23 @@ const LeagueSchedulesModal: React.FC = () => {
                                 </ul>
                                 <p className='italic font-sm text-[var(--text-highlight)]'>Click on a match to see match information</p>
                                 <hr />
-                                {selectedFlight && (
-                                    <div className="mt-4">
-                                        <div className='text-red-500 text-center'>Note: The testing date is set to 11/11/2024</div>
-                                        <label htmlFor="matchFilter" className="block text-sm font-medium">Filter Matches:</label>
-                                        <select
-                                            id="matchFilter"
-                                            className="p-2 w-full max-w-[300px] border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-                                            onChange={(e) => setMatchFilter(e.target.value as 'upcoming' | 'next' | 'all')}
-                                            value={matchFilter}
-                                        >
-                                            <option value="upcoming">Upcoming Matches</option>
-                                            <option value="next">Next Match</option>
-                                            <option value="all">All Matches</option>
-                                        </select>
-                                    </div>
-                                )}
-                                {selectedFlight && availableTeams.length > 1 && (
-                                    <div className="mt-4">
-                                        
-                                        <select
-                                            id="teamFilter"
-                                            className="mb-8 p-2 w-full max-w-[300px] border-2 border-[var(--select-border)] rounded-md bg-[var(--select-background)] text-[var(--select-text)] focus:outline-none"
-                                            onChange={(e) => setTeamFilter(e.target.value)}
-                                            value={teamFilter}
-                                        >
-                                            {availableTeams.map((team, index) => (
-                                                <option key={index} value={team}>
-                                                    {team === 'all' ? 'All Teams' : team}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
-
                             </div>
 
-                            {Object.entries(matchupsByDate).map(([date, matchups], index) => (
-                                <div key={index} className="flex flex-col bg-[var(--card-background)] border-l-4 border-[var(--card-highlight)] p-4 mb-4 rounded-lg">
-                                    <h3 className="text-lg font-medium text-[var(--card-title)] mb-2">
-                                        Week {weekNumbers[date] ??  'Unknown'} - {date}
-                                    </h3>
-                                    <table className="w-full border-collapse">
-                                        <thead>
-                                            <tr className="border-b-2 border-[var(--card-highlight)]">
-                                                <th className="text-left font-medium text-[var(--card-text)] p-2 sm:w-[15%]">Home</th>
-                                                <th className="text-center font-medium text-[var(--card-text)] p-2 sm:w-[10%]"></th>
-                                                <th className="text-left font-medium text-[var(--card-text)] p-2">Away</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {matchups.map((matchup, i) => {
-                                                const homeTeamPlayers = (playerData.find(team => team.team === matchup.homeTeam)?.players || []).slice(0, 2);
-                                                const awayTeamPlayers = (playerData.find(team => team.team === matchup.awayTeam)?.players || []).slice(0, 2);
-                                                return (
-                                                    <React.Fragment key={i}>
-                                                        <tr
-                                                            className="cursor-pointer odd:bg-[var(--table-odd-row)] even:bg-[var(--table-even-row)] border-none transition-all"
-                                                            onClick={() => toggleMatchupExpansion(date, i)}
-                                                        >
-                                                            <td className="text-[var(--card-text)] p-2 whitespace-nowrap">
-                                                                {matchup.homeTeam || "TBD"}
-                                                                {expandedMatchups[date]?.[i] && homeTeamPlayers.length > 0 && (
-                                                                    <div className="mt-1 text-xs">
-                                                                        {homeTeamPlayers.map((player, playerIndex) => (
-                                                                            <div key={playerIndex} className={"before:content-['↳'] before:mr-1"}>{player.name}</div>
-                                                                        ))}
-                                                                        <div className="mt-4 italic">@{matchup.at}</div>
-                                                                    </div>
-                                                                )}
-                                                            </td>
-                                                            <td className="text-center">vs.</td>
-                                                            <td className="text-[var(--card-text)] p-2 whitespace-nowrap">
-                                                                {matchup.awayTeam || "TBD"}
-                                                                {expandedMatchups[date]?.[i] && awayTeamPlayers.length > 0 && (
-                                                                    <div className="mt-1 text-xs">
-                                                                        {awayTeamPlayers.map((player, playerIndex) => (
-                                                                            <div key={playerIndex} className={"before:content-['↳'] before:mr-1"}>{player.name}</div>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                    </React.Fragment>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ))}
+                            <FilterControls
+                                matchFilter={matchFilter}
+                                teamFilter={teamFilter}
+                                availableTeams={availableTeams}
+                                onMatchFilterChange={handleMatchFilterChange}
+                                onTeamFilterChange={handleTeamFilterChange}
+                            />
+
+                            <ScheduleDisplay
+                                matchupsByDate={filteredMatchups}
+                                playerData={playerData}
+                                weekNumbers={weekNumbers}
+                                expandedMatchups={expandedMatchups}
+                                onToggleMatchup={toggleMatchupExpansion}
+                            />
                         </div>
                     )}
                 </>
