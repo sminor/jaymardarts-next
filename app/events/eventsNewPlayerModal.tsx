@@ -1,4 +1,3 @@
-/* eslint-disable react/no-unescaped-entities */
 import React, { useEffect, useState } from 'react';
 import { TableOfContents, Content } from '@/components/TableOfContents'; // Adjust import path as needed
 
