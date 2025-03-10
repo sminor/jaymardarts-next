@@ -189,7 +189,7 @@ const LeagueSchedulesModal: React.FC = () => {
             setError(null);
             try {
                 const { data: leaguesData, error: leaguesError } = await supabase
-                    .from('leagues')
+                    .from('league_details')
                     .select('id, name, day_of_week, start_time')
                     .order('name', { ascending: true });
 

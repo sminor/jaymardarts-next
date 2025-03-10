@@ -1,3 +1,4 @@
+// components/Modal.tsx
 import React, { ReactNode, useEffect, useRef } from 'react';
 import Button from '@/components/Button';
 import { FaTimes } from 'react-icons/fa';
