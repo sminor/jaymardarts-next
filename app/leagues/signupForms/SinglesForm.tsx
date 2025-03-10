@@ -2,7 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
-import { calculateFees, isValidEmail, formatPhoneNumber, isValidPhoneNumber } from '@/utils/formHelpers';
+import { isValidEmail, formatPhoneNumber, isValidPhoneNumber } from '@/utils/formHelpers';
 
 interface SignupSettings {
   id: string;
@@ -41,7 +41,6 @@ interface SinglesFormData {
   home_location_2: string;
   play_preference: string;
   total_fees_due: number;
-  player_league_cost: number;
   payment_method: string;
   signup_settings_id: string;
 }
@@ -49,9 +48,10 @@ interface SinglesFormData {
 interface SinglesFormProps {
   signup: SignupSettings;
   leagueDetails: LeagueDetails[];
+  onSubmitSuccess?: () => void;
 }
 
-const SinglesForm: React.FC<SinglesFormProps> = ({ signup, leagueDetails }) => {
+const SinglesForm: React.FC<SinglesFormProps> = ({ signup, leagueDetails, onSubmitSuccess }) => {
   const [locations, setLocations] = useState<Location[]>([]);
   const [formData, setFormData] = useState<SinglesFormData>({
     player_name: '',
@@ -64,7 +64,6 @@ const SinglesForm: React.FC<SinglesFormProps> = ({ signup, leagueDetails }) => {
     home_location_2: '',
     play_preference: 'Either',
     total_fees_due: 0,
-    player_league_cost: 0,
     payment_method: '',
     signup_settings_id: signup.id,
   });
@@ -81,7 +80,7 @@ const SinglesForm: React.FC<SinglesFormProps> = ({ signup, leagueDetails }) => {
         .from('locations')
         .select('id, name, league')
         .eq('league', true)
-        .order('name', { ascending: true }); // Sort alphabetically
+        .order('name', { ascending: true });
       if (error) console.error('Error fetching locations:', error);
       else setLocations(data as Location[]);
     };
@@ -89,24 +88,20 @@ const SinglesForm: React.FC<SinglesFormProps> = ({ signup, leagueDetails }) => {
   }, []);
 
   useEffect(() => {
+    const calculateFees = (leagueName: string, paidNDA: boolean): number => {
+      const league = leagueDetails.find((l) => l.name === leagueName);
+      if (!league) return 0;
+
+      const { cost_per_player, sanction_fee } = league;
+      return cost_per_player + (paidNDA ? 0 : sanction_fee);
+    };
+
     if (!formData.league_name) {
-      setFormData((prev) => ({
-        ...prev,
-        total_fees_due: 0,
-        player_league_cost: 0,
-      }));
+      setFormData((prev) => ({ ...prev, total_fees_due: 0 }));
       return;
     }
-    const fees = calculateFees(
-      formData.league_name,
-      { captain: formData.paid_nda, teammate: false },
-      leagueDetails
-    );
-    setFormData((prev) => ({
-      ...prev,
-      total_fees_due: fees.total_fees_due,
-      player_league_cost: fees.captain_league_cost || 0,
-    }));
+    const totalFees = calculateFees(formData.league_name, formData.paid_nda);
+    setFormData((prev) => ({ ...prev, total_fees_due: totalFees }));
   }, [formData.league_name, formData.paid_nda, leagueDetails]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -141,7 +136,28 @@ const SinglesForm: React.FC<SinglesFormProps> = ({ signup, leagueDetails }) => {
       return;
     }
 
-    const { error } = await supabase.from('league_signups').insert([formData]);
+    const submissionData = {
+      team_name: `${formData.player_name} (Solo)`,
+      captain_name: formData.player_name,
+      captain_adl_number: formData.adl_number,
+      captain_email: formData.email,
+      captain_phone_number: formData.phone_number,
+      captain_paid_nda: formData.paid_nda,
+      teammate_name: null,
+      teammate_adl_number: null,
+      teammate_email: null,
+      teammate_phone_number: null,
+      teammate_paid_nda: null,
+      league_name: formData.league_name,
+      home_location_1: formData.home_location_1,
+      home_location_2: formData.home_location_2,
+      play_preference: formData.play_preference,
+      total_fees_due: formData.total_fees_due,
+      payment_method: formData.payment_method,
+      signup_settings_id: formData.signup_settings_id,
+    };
+
+    const { error } = await supabase.from('league_signups').insert([submissionData]);
     if (error) {
       console.error('Submission error:', error.message);
       setSubmissionError('There was an error submitting your form. Please try again.');
@@ -150,19 +166,20 @@ const SinglesForm: React.FC<SinglesFormProps> = ({ signup, leagueDetails }) => {
     }
 
     setIsSubmitted(true);
+    if (onSubmitSuccess) onSubmitSuccess();
 
     setTimeout(() => {
       const encodedPlayerName = encodeURIComponent(`League Signup: ${formData.player_name}`);
       const paymentUrl =
         formData.payment_method === 'Venmo'
-          ? `https://venmo.com/jay-phillips-36?txn=pay&amount=${formData.total_fees_due.toFixed(2)}¬e=${encodedPlayerName}`
-          : `https://paypal.me/jayphillips1528/${formData.total_fees_due.toFixed(2)}?currencyCode=USD¬e=${encodedPlayerName}`;
+          ? `https://venmo.com/jay-phillips-36?txn=pay&amount=${formData.total_fees_due.toFixed(2)}&note=${encodedPlayerName}`
+          : `https://paypal.me/jayphillips1528/${formData.total_fees_due.toFixed(2)}?currencyCode=USD&note=${encodedPlayerName}`;
       window.open(paymentUrl, '_blank');
     }, 3000);
   };
 
   return (
-    <div className="flex justify-center">
+    <div className="flex justify-center"> {/* Reapplied centering */}
       {isSubmitted ? (
         <div className="space-y-4 w-full md:max-w-2xl text-center">
           <h3 className="text-[var(--text-highlight)]">Signup Submitted Successfully!</h3>
@@ -175,8 +192,8 @@ const SinglesForm: React.FC<SinglesFormProps> = ({ signup, leagueDetails }) => {
             <a
               href={
                 formData.payment_method === 'Venmo'
-                  ? `https://venmo.com/jay-phillips-36?txn=pay&amount=${formData.total_fees_due.toFixed(2)}¬e=${encodeURIComponent(`League Signup: ${formData.player_name}`)}`
-                  : `https://paypal.me/jayphillips1528/${formData.total_fees_due.toFixed(2)}?currencyCode=USD¬e=${encodeURIComponent(`League Signup: ${formData.player_name}`)}`
+                  ? `https://venmo.com/jay-phillips-36?txn=pay&amount=${formData.total_fees_due.toFixed(2)}&note=${encodeURIComponent(`League Signup: ${formData.player_name}`)}`
+                  : `https://paypal.me/jayphillips1528/${formData.total_fees_due.toFixed(2)}?currencyCode=USD&note=${encodeURIComponent(`League Signup: ${formData.player_name}`)}`
               }
               target="_blank"
               rel="noopener noreferrer"
@@ -377,17 +394,21 @@ const SinglesForm: React.FC<SinglesFormProps> = ({ signup, leagueDetails }) => {
 
           <div className="mb-6 p-4 bg-[var(--card-background)] rounded-md text-sm">
             <p>I understand that I will have to pay upon completion of this form.</p>
-            <p className="mt-2">Sign Up Fees:</p>
-            <ul className="list-disc list-inside">
-              <li>Player League Fee: <strong>${formData.player_league_cost.toFixed(2)}</strong></li>
-              {!formData.paid_nda && (
-                <li>NDA Sanctioning Fee: <strong>${leagueDetails.find((l) => l.name === formData.league_name)?.sanction_fee.toFixed(2) || '0.00'}</strong></li>
-              )}
-            </ul>
-            <p className="mt-2">Fees Due:</p>
-            <ul className="list-disc list-inside">
-              <li>Total: <strong>${formData.total_fees_due.toFixed(2)}</strong></li>
-            </ul>
+            {formData.league_name && (
+              <>
+                <p className="mt-2">Sign Up Fees:</p>
+                <ul className="list-disc list-inside">
+                  <li>Player League Fee: <strong>${leagueDetails.find((l) => l.name === formData.league_name)?.cost_per_player.toFixed(2) || '0.00'}</strong></li>
+                  {!formData.paid_nda && (
+                    <li>NDA Sanctioning Fee: <strong>${leagueDetails.find((l) => l.name === formData.league_name)?.sanction_fee.toFixed(2) || '0.00'}</strong></li>
+                  )}
+                </ul>
+                <p className="mt-2">Fees Due:</p>
+                <ul className="list-disc list-inside">
+                  <li>Total: <strong>${formData.total_fees_due.toFixed(2)}</strong></li>
+                </ul>
+              </>
+            )}
             <hr />
             <p>This league is ADL, NDA, and NADO sanctioned.</p>
             <p>I understand that I must abide by the <a href="http://actiondartleague.com/AutoRecovery_save_of_ADL_Rules_and_Guidelines-Player_Handbook-NEW-Updated.pdf" target="_blank" rel="noreferrer">league rules</a>, and failure to do so may result in disqualification for the season and future leagues.</p>

@@ -2,7 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
-import { calculateFees, isValidEmail, formatPhoneNumber, isValidPhoneNumber } from '@/utils/formHelpers';
+import { isValidEmail, formatPhoneNumber, isValidPhoneNumber } from '@/utils/formHelpers';
 
 interface SignupSettings {
   id: string;
@@ -47,8 +47,6 @@ interface DoublesFormData {
   home_location_2: string;
   play_preference: string;
   total_fees_due: number;
-  captain_league_cost: number;
-  teammate_league_cost: number;
   payment_method: string;
   signup_settings_id: string;
 }
@@ -56,9 +54,10 @@ interface DoublesFormData {
 interface DoublesFormProps {
   signup: SignupSettings;
   leagueDetails: LeagueDetails[];
+  onSubmitSuccess?: () => void;
 }
 
-const DoublesForm: React.FC<DoublesFormProps> = ({ signup, leagueDetails }) => {
+const DoublesForm: React.FC<DoublesFormProps> = ({ signup, leagueDetails, onSubmitSuccess }) => {
   const [locations, setLocations] = useState<Location[]>([]);
   const [formData, setFormData] = useState<DoublesFormData>({
     team_name: '',
@@ -77,8 +76,6 @@ const DoublesForm: React.FC<DoublesFormProps> = ({ signup, leagueDetails }) => {
     home_location_2: '',
     play_preference: 'Either',
     total_fees_due: 0,
-    captain_league_cost: 0,
-    teammate_league_cost: 0,
     payment_method: '',
     signup_settings_id: signup.id,
   });
@@ -105,26 +102,31 @@ const DoublesForm: React.FC<DoublesFormProps> = ({ signup, leagueDetails }) => {
   }, []);
 
   useEffect(() => {
+    const calculateFees = (
+      leagueName: string,
+      captainPaidNDA: boolean,
+      teammatePaidNDA: boolean
+    ): number => {
+      const league = leagueDetails.find((l) => l.name === leagueName);
+      if (!league) return 0;
+
+      const { cost_per_player, sanction_fee } = league;
+      const captainCost = cost_per_player + (captainPaidNDA ? 0 : sanction_fee);
+      const teammateCost = cost_per_player + (teammatePaidNDA ? 0 : sanction_fee);
+
+      return captainCost + teammateCost;
+    };
+
     if (!formData.league_name) {
-      setFormData((prev) => ({
-        ...prev,
-        total_fees_due: 0,
-        captain_league_cost: 0,
-        teammate_league_cost: 0,
-      }));
+      setFormData((prev) => ({ ...prev, total_fees_due: 0 }));
       return;
     }
-    const fees = calculateFees(
+    const totalFees = calculateFees(
       formData.league_name,
-      { captain: formData.captain_paid_nda, teammate: formData.teammate_paid_nda },
-      leagueDetails
+      formData.captain_paid_nda,
+      formData.teammate_paid_nda
     );
-    setFormData((prev) => ({
-      ...prev,
-      total_fees_due: fees.total_fees_due,
-      captain_league_cost: fees.captain_league_cost || 0,
-      teammate_league_cost: fees.teammate_league_cost || 0,
-    }));
+    setFormData((prev) => ({ ...prev, total_fees_due: totalFees }));
   }, [formData.league_name, formData.captain_paid_nda, formData.teammate_paid_nda, leagueDetails]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -176,6 +178,7 @@ const DoublesForm: React.FC<DoublesFormProps> = ({ signup, leagueDetails }) => {
     }
 
     setIsSubmitted(true);
+    if (onSubmitSuccess) onSubmitSuccess();
 
     setTimeout(() => {
       const encodedTeamName = encodeURIComponent(`League Signup: ${formData.team_name}`);
@@ -188,7 +191,7 @@ const DoublesForm: React.FC<DoublesFormProps> = ({ signup, leagueDetails }) => {
   };
 
   return (
-    <div className="flex justify-center">
+    <div className="flex justify-center"> {/* Reapplied centering */}
       {isSubmitted ? (
         <div className="space-y-4 w-full md:max-w-2xl text-center">
           <h3 className="text-[var(--text-highlight)]">Signup Submitted Successfully!</h3>
@@ -473,21 +476,25 @@ const DoublesForm: React.FC<DoublesFormProps> = ({ signup, leagueDetails }) => {
 
           <div className="mb-6 p-4 bg-[var(--card-background)] rounded-md text-sm">
             <p>I understand that I will have to pay upon completion of this form.</p>
-            <p className="mt-2">Sign Up Fees:</p>
-            <ul className="list-disc list-inside">
-              <li>Captain League Fee: <strong>${formData.captain_league_cost.toFixed(2)}</strong></li>
-              <li>Teammate League Fee: <strong>${formData.teammate_league_cost.toFixed(2)}</strong></li>
-              {!formData.captain_paid_nda && (
-                <li>Captain NDA Sanctioning Fee: <strong>${leagueDetails.find((l) => l.name === formData.league_name)?.sanction_fee.toFixed(2) || '0.00'}</strong></li>
-              )}
-              {!formData.teammate_paid_nda && (
-                <li>Teammate NDA Sanctioning Fee: <strong>${leagueDetails.find((l) => l.name === formData.league_name)?.sanction_fee.toFixed(2) || '0.00'}</strong></li>
-              )}
-            </ul>
-            <p className="mt-2">Fees Due:</p>
-            <ul className="list-disc list-inside">
-              <li>Total: <strong>${formData.total_fees_due.toFixed(2)}</strong></li>
-            </ul>
+            {formData.league_name && (
+              <>
+                <p className="mt-2">Sign Up Fees:</p>
+                <ul className="list-disc list-inside">
+                  <li>Captain League Fee: <strong>${leagueDetails.find((l) => l.name === formData.league_name)?.cost_per_player.toFixed(2) || '0.00'}</strong></li>
+                  <li>Teammate League Fee: <strong>${leagueDetails.find((l) => l.name === formData.league_name)?.cost_per_player.toFixed(2) || '0.00'}</strong></li>
+                  {!formData.captain_paid_nda && (
+                    <li>Captain NDA Sanctioning Fee: <strong>${leagueDetails.find((l) => l.name === formData.league_name)?.sanction_fee.toFixed(2) || '0.00'}</strong></li>
+                  )}
+                  {!formData.teammate_paid_nda && (
+                    <li>Teammate NDA Sanctioning Fee: <strong>${leagueDetails.find((l) => l.name === formData.league_name)?.sanction_fee.toFixed(2) || '0.00'}</strong></li>
+                  )}
+                </ul>
+                <p className="mt-2">Fees Due:</p>
+                <ul className="list-disc list-inside">
+                  <li>Total: <strong>${formData.total_fees_due.toFixed(2)}</strong></li>
+                </ul>
+              </>
+            )}
             <hr />
             <p>This league is ADL, NDA, and NADO sanctioned.</p>
             <p>I understand that I must abide by the <a href="http://actiondartleague.com/AutoRecovery_save_of_ADL_Rules_and_Guidelines-Player_Handbook-NEW-Updated.pdf" target="_blank" rel="noreferrer">league rules</a>, and failure to do so may result in disqualification for the season and future leagues.</p>

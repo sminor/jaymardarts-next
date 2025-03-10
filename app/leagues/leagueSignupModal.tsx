@@ -31,6 +31,7 @@ const LeagueSignupModal: React.FC = () => {
   const [selectedSignup, setSelectedSignup] = useState<SignupSettings | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFormSubmitted, setIsFormSubmitted] = useState(false); // New state
 
   useEffect(() => {
     const fetchData = async () => {
@@ -70,6 +71,10 @@ const LeagueSignupModal: React.FC = () => {
     fetchData();
   }, []);
 
+  const handleSubmitSuccess = () => {
+    setIsFormSubmitted(true); // Set to true on form submission
+  };
+
   return (
     <div className="flex flex-col items-center">
       {isLoading ? (
@@ -101,7 +106,7 @@ const LeagueSignupModal: React.FC = () => {
         <p className="text-center">No leagues are currently accepting sign-ups.</p>
       ) : (
         <>
-          {signupSettings.length > 1 && (
+          {!isFormSubmitted && signupSettings.length > 1 && ( // Hide dropdown when submitted
             <div className="mb-6 w-full md:max-w-2xl">
               <label htmlFor="signup_select" className="block text-sm font-medium">
                 Select a League to Sign Up For
@@ -132,6 +137,7 @@ const LeagueSignupModal: React.FC = () => {
                   leagueDetails={leagueDetails.filter(
                     (l) => l.signup_settings_id === selectedSignup.id
                   )}
+                  onSubmitSuccess={handleSubmitSuccess} // Pass callback
                 />
               ) : selectedSignup.form_type === 'SinglesForm' ? (
                 <SinglesForm
@@ -139,6 +145,7 @@ const LeagueSignupModal: React.FC = () => {
                   leagueDetails={leagueDetails.filter(
                     (l) => l.signup_settings_id === selectedSignup.id
                   )}
+                  onSubmitSuccess={handleSubmitSuccess} // Pass callback (assuming SinglesForm is updated)
                 />
               ) : (
                 <p className="text-red-500">Invalid form type: {selectedSignup.form_type}</p>
