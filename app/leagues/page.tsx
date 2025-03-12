@@ -1,4 +1,3 @@
-// app/leagues/page.tsx
 'use client';
 import React, { useState } from 'react';
 import NavBar from '@/components/NavBar';
@@ -10,7 +9,7 @@ import LeagueSignupModal from './leagueSignupModal'; // Updated path
 import LeagueSchedulesModal from './leagueSchedulesModal';
 import LeagueStandingsModal from './leagueStandingsModal';
 import LeagueInfoContent from './leagueInfoModal';
-import { FaUsers, FaInfoCircle, FaCalendarAlt, FaTrophy } from 'react-icons/fa';
+import { FaPencilAlt, FaInfoCircle, FaCalendarAlt, FaTrophy } from 'react-icons/fa'; // Updated import
 
 const Leagues = () => {
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
@@ -43,7 +42,7 @@ const Leagues = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="flex-1">
               <Button
-                icon={<FaUsers size={32} aria-hidden="true" />}
+                icon={<FaPencilAlt size={32} aria-hidden="true" />}
                 aria-label="View League Sign-up"
                 onClick={() => setIsSignupModalOpen(true)}
               >
