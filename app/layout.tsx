@@ -21,7 +21,10 @@ export const metadata: Metadata = {
     { rel: "icon", url: "/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
   ],
   manifest: "/site.webmanifest",
-  themeColor: "#C68E38", // Matches your gold --color7
+};
+
+export const viewport = {
+  themeColor: "#C68E38",
 };
 
 export default function RootLayout({
@@ -31,10 +34,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link rel="manifest" href="/site.webmanifest" />
-        <meta name="theme-color" content="#C68E38" /> {/* For Android Chrome */}
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

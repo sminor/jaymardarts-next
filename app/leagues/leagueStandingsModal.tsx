@@ -277,9 +277,7 @@ const LeagueStandingsModal: React.FC = () => {
     
 
     return (
-        <div className="p-4">
-            <h2 className="text-xl font-bold mb-4">League Standings</h2>
-    
+        <div className="p-4">    
             {loading && <p>Loading leagues and flights...</p>}
             {error && <p className="text-red-500">Error: {error}</p>}
     

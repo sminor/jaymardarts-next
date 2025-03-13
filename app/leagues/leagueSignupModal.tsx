@@ -76,7 +76,7 @@ const LeagueSignupModal: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="p-4 flex flex-col items-center">
       {isLoading ? (
         <div className="flex justify-center items-center py-4">
           <svg

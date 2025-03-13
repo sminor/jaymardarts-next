@@ -51,7 +51,14 @@
   --card-new: var(--color5);
   --card-today: var(--color6);
   --card-special: var(--color5);
+
+  /* Tab Colors */
+  --tab-background-inactive: var(--color2);
+  --tab-background-active: var(--color3);
+  --tab-text: var(--color4);
+  --tab-text-active: var(--color7);
   
+  /* Card Colors */
   --card-past-background: var(--color3) ;
   --card-past-text: var(--color8); ;
   --card-past-title: var(--color8); ;
@@ -76,6 +83,15 @@
   /* Table Colors */
   --table-odd-row: var(--color1);
   --table-even-row: var(--color2);
+
+  /* Form Colors */
+  --form-background: var(--color2);
+  --form-text: var(--color4);
+  --form-border: var(--color7);
+  --form-checkbox: var(--color4);
+  --form-checkbox-checked: var(--color7);
+  --form-radio: var(--color4);
+  --form-radio-checked: var(--color7);
 
 }
 

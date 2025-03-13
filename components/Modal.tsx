@@ -42,7 +42,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, content, title, classNam
             >
                 {/* Title & Close Button */}
                 <div className="flex justify-between">
-                    {title && <h2 className="mt-0 mb-0 text-[var(--text-highlight)]">{title}</h2>}
+                    {title && <h2 className="mt-0 mb-5 text-[var(--text-highlight)]">{title}</h2>}
                     
                     {/* Close Button */}
                     <Button

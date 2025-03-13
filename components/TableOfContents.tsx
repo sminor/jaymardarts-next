@@ -26,8 +26,8 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({ items }) => {
   }, [currentTOCIndex, items]);
 
   return (
-    <div className="space-y-6">
-      <ul className="space-y-2">
+    <div className="p-4">
+      <ul className=''>
         {items.map((toc, index) => (
           <li key={toc.id}>
             <button
