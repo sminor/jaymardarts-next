@@ -250,6 +250,8 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                       <option value="A/B Draw">A/B Draw</option>
                       <option value="Blind Draw">Blind Draw</option>
                       <option value="Partner Bring">Partner Bring</option>
+                      <option value="Parity Draw">Parity Draw</option>
+                      <option value="Low Player Pick">Low Player Pick</option>
                     </select>
                   </div>
                 </td>

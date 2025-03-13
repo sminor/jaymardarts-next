@@ -93,6 +93,10 @@
   --form-radio: var(--color4);
   --form-radio-checked: var(--color7);
 
+  /* Draggable Card Colors */
+  --drag-card-background: var(--color2);
+  --drag-card-text: var(--color4);
+
 }
 
 

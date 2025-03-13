@@ -22,7 +22,7 @@ export interface Player {
     payout_spots?: number; // Optional
     tournament_type: string | null;
     tournament_code?: string | null;
-    players: Player[];
-    teams: string[][];
+    players: { name: string; ppd: number; mpr: number; paid: boolean }[];
+    teams: { name: string; players: string[] }[];
     created_at: string;
   }

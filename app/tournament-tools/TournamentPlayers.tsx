@@ -99,12 +99,34 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
     } else if (e.key === 'Enter' && selectedIndex >= 0) {
       e.preventDefault();
       addPlayer(filteredPlayers[selectedIndex]);
-      setSearchTerm('');
-      setSelectedIndex(-1);
+      // Move selection to the next available player, or reset if none left
+      setSelectedIndex((prev) => {
+        const remainingPlayers = filterPlayers(allPlayers, searchTerm);
+        if (remainingPlayers.length > 0) {
+          const newIndex = prev < remainingPlayers.length ? prev : remainingPlayers.length - 1;
+          if (searchResultsRef.current && newIndex >= 0) {
+            searchResultsRef.current.children[newIndex]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+          return newIndex;
+        }
+        return -1; // Reset if no players remain
+      });
     } else if (e.key === 'Escape') {
       e.preventDefault();
       setSearchTerm('');
       setSelectedIndex(-1);
+    }
+  };
+
+  // Handle search input change and reset selectedIndex to 0 when search term becomes empty
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newSearchTerm = e.target.value;
+    setSearchTerm(newSearchTerm);
+    if (!newSearchTerm.trim() && filteredPlayers.length > 0) {
+      setSelectedIndex(0); // Reset to first result when search term is emptied
+      if (searchResultsRef.current) {
+        searchResultsRef.current.children[0]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
     }
   };
 
@@ -129,8 +151,6 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
   const addPlayer = (player: Player) => {
     const updatedPlayers = [...tournament.players, { ...player, paid: false }];
     updatePlayersInDatabase(updatedPlayers);
-    setSearchTerm('');
-    setSelectedIndex(-1);
   };
 
   const removePlayer = (player: Player) => {
@@ -178,7 +198,7 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
           type="text"
           placeholder="Search players..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={handleSearchChange} // Updated to use new handler
           onKeyDown={handleKeyDown}
           className="p-2 w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none"
         />
@@ -228,11 +248,11 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
           className="p-2 w-1/6 border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none"
         />
         <Button
-            onClick={addNewPlayer}
-            icon={<FaUserPlus size={20} aria-hidden="true" />}
-            className="p-2 h-10.5 w-1/6"
-            ariaLabel="Add new player"
-            >
+          onClick={addNewPlayer}
+          icon={<FaUserPlus size={20} aria-hidden="true" />}
+          className="p-2 h-10.5 w-1/6"
+          ariaLabel="Add new player"
+        >
         </Button>
       </div>
       {formError && <p className="text-red-500 text-sm mt-4 text-center">{formError}</p>}
