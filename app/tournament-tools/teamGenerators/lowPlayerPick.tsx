@@ -301,7 +301,7 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
           {/* Two-Column Player Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h4 className="text-md text-[var(--card-title)] mb-2">A Players)</h4>
+              <h4 className="text-md text-[var(--card-title)] mb-2">A Players</h4>
               <div className="min-h-[100px]">
                 {aPlayers.map((player, index) => (
                   <PlayerCard
