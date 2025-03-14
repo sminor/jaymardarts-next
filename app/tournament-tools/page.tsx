@@ -96,7 +96,7 @@ export default function TournamentTools() {
             {/* Tournament Info */}
             <hr className="border-[var(--text-highlight)]" />
             <div className="mb-4 mt-4 text-center">
-              <h2 className="text-xl font-semibold text-[var(--card-title)]">
+              <h2 className="text-xl font-semibold text-[var(--text-highlight)]">
                 {selectedTournament.name} - {selectedTournament.date} - {selectedTournament.location}
               </h2>
             </div>

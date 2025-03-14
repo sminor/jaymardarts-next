@@ -19,11 +19,11 @@ interface PlayerCardProps {
     toListType: 'aPlayers' | 'bPlayers' | 'availablePlayers'
   ) => void;
   listType: 'aPlayers' | 'bPlayers' | 'availablePlayers';
-  statValue?: number; // Optional for placeholders
+  sortStat: 'combo' | 'ppd' | 'mpr'; // New prop to determine which stat to show
   isRemovePlaceholder?: boolean; // Flag for "Drop Here to Remove"
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({ player, index, movePlayer, listType, statValue, isRemovePlaceholder = false }) => {
+const PlayerCard: React.FC<PlayerCardProps> = ({ player, index, movePlayer, listType, sortStat, isRemovePlaceholder = false }) => {
   const ref = React.useRef<HTMLDivElement>(null);
 
   const [, drag] = useDrag({
@@ -43,13 +43,24 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, index, movePlayer, list
 
   drag(drop(ref));
 
+  // Calculate the tooltip based on the current sort stat
+  const tooltipText = player
+    ? sortStat === 'combo'
+      ? `Combo: ${(player.ppd + player.mpr * 10).toFixed(2)}`
+      : sortStat === 'ppd'
+      ? `PPD: ${player.ppd.toFixed(2)}`
+      : `MPR: ${player.mpr.toFixed(2)}`
+    : isRemovePlaceholder
+    ? 'Drop here to remove a player'
+    : 'No player selected';
+
   return (
     <div
       ref={ref}
       className={`p-2 bg-[var(--drag-card-background)] rounded-md shadow-sm ${
         player ? 'cursor-move' : 'cursor-default opacity-50'
       } text-[var(--drag-card-text)] mb-2`}
-      title={statValue?.toFixed(2)}
+      title={tooltipText} // Show only the relevant stat
     >
       {player ? player.name : isRemovePlaceholder ? <i>Drop Here to Remove</i> : <i>Empty</i>}
     </div>
@@ -60,11 +71,12 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
   tournament,
   onUpdate,
 }) => {
-  const [aPlayers, setAPlayers] = useState<(Tournament['players'][0] | null)[]>([]); // Allow null for placeholders
-  const [bPlayers, setBPlayers] = useState<(Tournament['players'][0] | null)[]>([]); // Allow null for placeholders
-  const [availablePlayers, setAvailablePlayers] = useState<(Tournament['players'][0] | null)[]>([]); // Allow null for remove placeholder
+  const [aPlayers, setAPlayers] = useState<(Tournament['players'][0] | null)[]>([]);
+  const [bPlayers, setBPlayers] = useState<(Tournament['players'][0] | null)[]>([]);
+  const [availablePlayers, setAvailablePlayers] = useState<(Tournament['players'][0] | null)[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sortStat, setSortStat] = useState<'combo' | 'ppd' | 'mpr'>('combo'); // Track current sort stat
   const initializedTournamentId = useRef<string | null>(null);
 
   const getPlayerStat = useCallback((player: Tournament['players'][0], stat: 'combo' | 'ppd' | 'mpr') => {
@@ -113,6 +125,7 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
       setAPlayers(newAPlayers);
       setBPlayers(newBPlayers);
       setAvailablePlayers(newAvailablePlayers);
+      setSortStat(stat); // Update the current sort stat
       await clearTeams();
     },
     [tournament.players, getPlayerStat, clearTeams]
@@ -188,11 +201,19 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
     } else {
       // Dragging to/from Available Players
       if (toListType === 'availablePlayers') {
-        // Moving to Available Players, replace source with placeholder
-        sourceList.splice(fromIndex, 0, null);
-        targetList.splice(toIndex, 1, movedPlayer);
-        if (!updatedAvailablePlayers.some(p => p === null)) {
-          updatedAvailablePlayers.unshift(null); // Add remove placeholder at top
+        // Moving to Available Players
+        const displacedPlayer = targetList[toIndex];
+        if (displacedPlayer) {
+          // Swap with the displaced player
+          targetList[toIndex] = movedPlayer;
+          sourceList.splice(fromIndex, 0, displacedPlayer);
+        } else {
+          // Dropped on "Drop Here to Remove", replace source with placeholder
+          sourceList.splice(fromIndex, 0, null);
+          targetList.splice(toIndex, 1, movedPlayer);
+          if (!updatedAvailablePlayers.some(p => p === null)) {
+            updatedAvailablePlayers.unshift(null); // Add remove placeholder at top
+          }
         }
       } else if (fromListType === 'availablePlayers') {
         // Moving from Available Players to A or B
@@ -258,6 +279,7 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex flex-col gap-4">
+        <h2 className='text-xl font-semibold text-[var(--text-highlight)]'>Low Player Pick</h2>
         {error && <p className="text-red-500 text-center">{error}</p>}
         <div className="flex flex-col gap-4">
           {/* Sort Buttons */}
@@ -279,7 +301,7 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
           {/* Two-Column Player Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h4 className="text-md text-[var(--card-title)] mb-2">A Players (Picked)</h4>
+              <h4 className="text-md text-[var(--card-title)] mb-2">A Players)</h4>
               <div className="min-h-[100px]">
                 {aPlayers.map((player, index) => (
                   <PlayerCard
@@ -288,13 +310,14 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
                     index={index}
                     movePlayer={movePlayer}
                     listType="aPlayers"
-                    statValue={player ? getPlayerStat(player, 'combo') : undefined}
+                    sortStat={sortStat} // Pass current sort stat
+                    isRemovePlaceholder={false} // Not needed here
                   />
                 ))}
               </div>
             </div>
             <div>
-              <h4 className="text-md text-[var(--card-title)] mb-2">B Players (Low)</h4>
+              <h4 className="text-md text-[var(--card-title)] mb-2">B Players</h4>
               <div className="min-h-[100px]">
                 {bPlayers.map((player, index) => (
                   <PlayerCard
@@ -303,16 +326,17 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
                     index={index}
                     movePlayer={movePlayer}
                     listType="bPlayers"
-                    statValue={player ? getPlayerStat(player, 'combo') : undefined}
+                    sortStat={sortStat} // Pass current sort stat
+                    isRemovePlaceholder={false} // Not needed here
                   />
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Available High Players */}
+          {/* Available Players */}
           <div>
-            <h4 className="text-md text-[var(--card-title)] mb-2">Available High Players</h4>
+            <h4 className="text-md text-[var(--card-title)] mb-2">Available Players</h4>
             <div className="min-h-[100px]">
               {availablePlayers.map((player, index) => (
                 <PlayerCard
@@ -321,7 +345,7 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
                   index={index}
                   movePlayer={movePlayer}
                   listType="availablePlayers"
-                  statValue={player ? getPlayerStat(player, 'combo') : undefined}
+                  sortStat={sortStat} // Pass current sort stat
                   isRemovePlaceholder={!player}
                 />
               ))}

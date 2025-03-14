@@ -8,10 +8,10 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
   const [formData, setFormData] = useState({
     ...tournament,
     tournament_code: tournament.tournament_code || '',
-    entry_fee: tournament.entry_fee ?? 10,
-    bar_contribution: tournament.bar_contribution ?? 6,
-    usage_fee: tournament.usage_fee ?? 1,
-    bonus_money: tournament.bonus_money ?? 0,
+    entry_fee: (tournament.entry_fee ?? 10).toFixed(2), // Store as string with 2 decimals
+    bar_contribution: (tournament.bar_contribution ?? 6).toFixed(2), // Store as string with 2 decimals
+    usage_fee: (tournament.usage_fee ?? 1).toFixed(2), // Store as string with 2 decimals
+    bonus_money: (tournament.bonus_money ?? 0).toFixed(2), // Store as string with 2 decimals
     payout_spots: tournament.payout_spots ?? 3,
   });
   const [error, setError] = useState<string | null>(null);
@@ -21,10 +21,10 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
     setFormData({
       ...tournament,
       tournament_code: tournament.tournament_code || '',
-      entry_fee: tournament.entry_fee ?? 10,
-      bar_contribution: tournament.bar_contribution ?? 6,
-      usage_fee: tournament.usage_fee ?? 1,
-      bonus_money: tournament.bonus_money ?? 0,
+      entry_fee: (tournament.entry_fee ?? 10).toFixed(2),
+      bar_contribution: (tournament.bar_contribution ?? 6).toFixed(2),
+      usage_fee: (tournament.usage_fee ?? 1).toFixed(2),
+      bonus_money: (tournament.bonus_money ?? 0).toFixed(2),
       payout_spots: tournament.payout_spots ?? 3,
     });
   }, [tournament]);
@@ -54,7 +54,12 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
     setFormData((prev) => {
       const updated = {
         ...prev,
-        [name]: name === 'payout_spots' ? parseInt(value, 10) : name === 'entry_fee' || name === 'bar_contribution' || name === 'usage_fee' || name === 'bonus_money' ? parseFloat(value) : value,
+        [name]:
+          name === 'payout_spots'
+            ? parseInt(value, 10)
+            : name === 'entry_fee' || name === 'bar_contribution' || name === 'usage_fee' || name === 'bonus_money'
+            ? parseFloat(value || '0').toFixed(2) // Ensure 2 decimal places for monetary fields
+            : value,
       };
       if (name === 'tournament_type' && !value.trim()) {
         setError('Tournament Type is required.');
@@ -76,9 +81,17 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
       setError('Location is required.');
       return;
     }
+    // Convert monetary fields back to numbers for saving
+    const saveData = {
+      ...formData,
+      entry_fee: parseFloat(formData.entry_fee),
+      bar_contribution: parseFloat(formData.bar_contribution),
+      usage_fee: parseFloat(formData.usage_fee),
+      bonus_money: parseFloat(formData.bonus_money),
+    };
     const { data, error } = await supabase
       .from('tournaments')
-      .update(formData)
+      .update(saveData)
       .eq('id', tournament.id)
       .select()
       .single();
@@ -91,10 +104,10 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
     }
   };
 
-  const entryFee = formData.entry_fee;
-  const barContribution = formData.bar_contribution;
-  const usageFee = formData.usage_fee;
-  const bonusMoney = formData.bonus_money;
+  const entryFee = parseFloat(formData.entry_fee); // Parse for calculations
+  const barContribution = parseFloat(formData.bar_contribution); // Parse for calculations
+  const usageFee = parseFloat(formData.usage_fee); // Parse for calculations
+  const bonusMoney = parseFloat(formData.bonus_money); // Parse for calculations
   const payoutSpots = formData.payout_spots;
 
   const totalEntryFees = tournament.players.length * entryFee;
@@ -132,7 +145,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
       sumOfRatios += ratio;
     }
 
-    const adjustedRatios = ratioList.map(r => r / sumOfRatios);
+    const adjustedRatios = ratioList.map((r) => r / sumOfRatios);
     const extraPool = remainingPool;
 
     for (let i = 0; i < spots; i++) {
@@ -169,7 +182,6 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
 
   const roundedPayouts = calculatePayouts();
 
-  // Rest of the JSX remains unchanged
   return (
     <section className="p-4">
       {error && <p className="text-red-500 text-center mb-4">{error}</p>}
@@ -229,6 +241,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                           {loc.name}
                         </option>
                       ))}
+                      <option value="Remote">Remote</option>
                     </select>
                   </div>
                 </td>
@@ -283,7 +296,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                       <input
                         type="number"
                         name="entry_fee"
-                        value={formData.entry_fee ?? ''}
+                        value={formData.entry_fee}
                         onChange={handleInputChange}
                         step="1"
                         min="0"
@@ -304,7 +317,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                       <input
                         type="number"
                         name="bar_contribution"
-                        value={formData.bar_contribution ?? ''}
+                        value={formData.bar_contribution}
                         onChange={handleInputChange}
                         step="1"
                         min="0"
@@ -325,7 +338,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                       <input
                         type="number"
                         name="usage_fee"
-                        value={formData.usage_fee ?? ''}
+                        value={formData.usage_fee}
                         onChange={handleInputChange}
                         step="1"
                         min="0"
@@ -346,7 +359,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                       <input
                         type="number"
                         name="bonus_money"
-                        value={formData.bonus_money ?? ''}
+                        value={formData.bonus_money}
                         onChange={handleInputChange}
                         step="1"
                         min="0"
@@ -441,20 +454,23 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
             <h3 className="text-md font-bold text-[var(--card-title)] mb-2 text-center">Suggested Payouts</h3>
             <table className="w-full border-collapse">
               <tbody>
-                {roundedPayouts.map((payout, index) => (
-                  <tr key={index}>
-                    <td className="text-[var(--card-text)] align-middle w-1/2 text-center">
-                      <div className="h-[59px] flex items-center justify-center">
-                        {index + 1 + getOrdinalSuffix(index + 1)} Place
-                      </div>
-                    </td>
-                    <td className="align-middle w-1/2 text-center">
-                      <div className="h-[59px] flex items-center justify-center">
-                        ${payout.toFixed(2)}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {roundedPayouts.map((payout, index) => {
+                  const perPlayer = payout / 2; // Assuming 2 players per team
+                  return (
+                    <tr key={index}>
+                      <td className="text-[var(--card-text)] align-middle w-1/2 text-center">
+                        <div className="h-[59px] flex items-center justify-center">
+                          {index + 1 + getOrdinalSuffix(index + 1)} Place
+                        </div>
+                      </td>
+                      <td className="align-middle w-1/2 text-center">
+                        <div className="h-[59px] flex items-center justify-center">
+                          ${payout.toFixed(2)} (${perPlayer.toFixed(2)} each)
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

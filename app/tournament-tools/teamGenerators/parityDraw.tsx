@@ -14,10 +14,10 @@ interface PlayerCardProps {
   index: number;
   swapPlayers: (fromIndex: number, toIndex: number, fromListType: 'aPlayers' | 'bPlayers', toListType: 'aPlayers' | 'bPlayers') => void;
   listType: 'aPlayers' | 'bPlayers';
-  statValue: number;
+  sortStat: 'combo' | 'ppd' | 'mpr'; // New prop for sort stat
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({ player, index, swapPlayers, listType, statValue }) => {
+const PlayerCard: React.FC<PlayerCardProps> = ({ player, index, swapPlayers, listType, sortStat }) => {
   const ref = React.useRef<HTMLDivElement>(null);
 
   const [, drag] = useDrag({
@@ -36,11 +36,19 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, index, swapPlayers, lis
 
   drag(drop(ref));
 
+  // Calculate the tooltip based on the current sort stat
+  const tooltipText =
+    sortStat === 'combo'
+      ? `Combo: ${(player.ppd + player.mpr * 10).toFixed(2)}`
+      : sortStat === 'ppd'
+      ? `PPD: ${player.ppd.toFixed(2)}`
+      : `MPR: ${player.mpr.toFixed(2)}`;
+
   return (
     <div
       ref={ref}
       className="p-2 bg-[var(--drag-card-background)] rounded-md shadow-sm cursor-move text-[var(--drag-card-text)] mb-2"
-      title={statValue.toFixed(2)}
+      title={tooltipText} // Show stat based on sortStat
     >
       {player.name}
     </div>
@@ -55,6 +63,7 @@ const ParityDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTour
   const [bPlayers, setBPlayers] = useState<Tournament['players']>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sortStat, setSortStat] = useState<'combo' | 'ppd' | 'mpr'>('combo'); // Track current sort stat
   const initializedTournamentId = useRef<string | null>(null);
 
   const getPlayerStat = useCallback((player: Tournament['players'][0], stat: 'combo' | 'ppd' | 'mpr') => {
@@ -101,6 +110,7 @@ const ParityDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTour
 
       setAPlayers(newAPlayers);
       setBPlayers(newBPlayers);
+      setSortStat(stat); // Update the current sort stat
       await clearTeams();
     },
     [tournament.players, getPlayerStat, clearTeams]
@@ -200,6 +210,7 @@ const ParityDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTour
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex flex-col gap-4">
+        <h2 className='text-xl font-semibold text-[var(--text-highlight)]'>Parity Draw</h2>
         {error && <p className="text-red-500 text-center">{error}</p>}
         <div className="flex flex-col gap-4">
           {/* Sort Buttons */}
@@ -230,7 +241,7 @@ const ParityDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTour
                     index={index}
                     swapPlayers={swapPlayers}
                     listType="aPlayers"
-                    statValue={getPlayerStat(player, 'combo')}
+                    sortStat={sortStat} // Pass current sort stat
                   />
                 ))}
               </div>
@@ -245,7 +256,7 @@ const ParityDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTour
                     index={index}
                     swapPlayers={swapPlayers}
                     listType="bPlayers"
-                    statValue={getPlayerStat(player, 'combo')}
+                    sortStat={sortStat} // Pass current sort stat
                   />
                 ))}
               </div>

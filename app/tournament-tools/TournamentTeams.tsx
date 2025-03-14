@@ -236,7 +236,7 @@ const TournamentHelper: React.FC<{ teamData: Tournament }> = ({ teamData }) => {
       onClick={handleWindows}
       icon={<FaTools />}
       iconPosition="left"
-      className="w-auto mt-2"
+      className="w-auto mt-8"
     >
       Tournament Helper
     </Button>

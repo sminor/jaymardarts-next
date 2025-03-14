@@ -177,6 +177,7 @@ const PartnerBringTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex flex-col gap-4">
+        <h2 className='text-xl font-semibold text-[var(--text-highlight)]'>Partner Bring</h2>
         {error && <p className="text-red-500 text-center">{error}</p>}
         <div className="flex flex-col gap-4">
           {/* Two-Column Player Cards */}
