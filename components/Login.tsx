@@ -44,7 +44,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
         options: {
-          redirectTo: 'https://jaymardarts-next.netlify.app/tournament-tools',
+          redirectTo: 'https://jaymardarts-next.netlify.app',
         },
       });
 
