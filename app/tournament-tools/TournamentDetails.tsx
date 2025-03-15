@@ -1,18 +1,19 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
-import Button from '@/components/Button';
 import { Tournament, Location } from './types';
+import { tournamentTypes } from './teamGenerators'; // Import the registry
 
 const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTournament: Tournament) => void }> = ({ tournament, onUpdate }) => {
   const [formData, setFormData] = useState({
     ...tournament,
     tournament_code: tournament.tournament_code || '',
-    entry_fee: (tournament.entry_fee ?? 10).toFixed(2), // Store as string with 2 decimals
-    bar_contribution: (tournament.bar_contribution ?? 6).toFixed(2), // Store as string with 2 decimals
-    usage_fee: (tournament.usage_fee ?? 1).toFixed(2), // Store as string with 2 decimals
-    bonus_money: (tournament.bonus_money ?? 0).toFixed(2), // Store as string with 2 decimals
+    entry_fee: (tournament.entry_fee ?? 10).toFixed(2),
+    bar_contribution: (tournament.bar_contribution ?? 6).toFixed(2),
+    usage_fee: (tournament.usage_fee ?? 1).toFixed(2),
+    bonus_money: (tournament.bonus_money ?? 0).toFixed(2),
     payout_spots: tournament.payout_spots ?? 3,
+    tournament_completed: tournament.tournament_completed ?? false,
   });
   const [error, setError] = useState<string | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -26,6 +27,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
       usage_fee: (tournament.usage_fee ?? 1).toFixed(2),
       bonus_money: (tournament.bonus_money ?? 0).toFixed(2),
       payout_spots: tournament.payout_spots ?? 3,
+      tournament_completed: tournament.tournament_completed ?? false,
     });
   }, [tournament]);
 
@@ -42,59 +44,30 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
     fetchLocations();
   }, []);
 
-  const getOrdinalSuffix = (num: number): string => {
-    const suffixes = ['th', 'st', 'nd', 'rd'];
-    const remainder = num % 100;
-    const relevant = remainder % 10;
-    return remainder > 10 && remainder < 20 ? 'th' : suffixes[relevant] || 'th';
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => {
-      const updated = {
-        ...prev,
-        [name]:
-          name === 'payout_spots'
-            ? parseInt(value, 10)
-            : name === 'entry_fee' || name === 'bar_contribution' || name === 'usage_fee' || name === 'bonus_money'
-            ? parseFloat(value || '0').toFixed(2) // Ensure 2 decimal places for monetary fields
-            : value,
-      };
-      if (name === 'tournament_type' && !value.trim()) {
-        setError('Tournament Type is required.');
-      } else if (name === 'location' && !value.trim()) {
-        setError('Location is required.');
-      } else {
-        setError(null);
-      }
-      return updated;
-    });
-  };
-
-  const handleSave = async () => {
-    if (!formData.tournament_type || !formData.tournament_type.trim()) {
-      setError('Tournament Type is required.');
-      return;
-    }
-    if (!formData.location || !formData.location.trim()) {
-      setError('Location is required.');
-      return;
-    }
-    // Convert monetary fields back to numbers for saving
-    const saveData = {
-      ...formData,
-      entry_fee: parseFloat(formData.entry_fee),
-      bar_contribution: parseFloat(formData.bar_contribution),
-      usage_fee: parseFloat(formData.usage_fee),
-      bonus_money: parseFloat(formData.bonus_money),
+  const debounce = <T extends (arg: Partial<Tournament>) => void>(func: T, wait: number) => {
+    let timeout: NodeJS.Timeout;
+    return (arg: Parameters<T>[0]): void => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(arg), wait);
     };
+  };
+
+  const updateDatabase = async (updatedData: Partial<Tournament>) => {
+    const saveData: Partial<Tournament> = {
+      ...updatedData,
+      ...(updatedData.entry_fee !== undefined && { entry_fee: Number(updatedData.entry_fee) }),
+      ...(updatedData.bar_contribution !== undefined && { bar_contribution: Number(updatedData.bar_contribution) }),
+      ...(updatedData.usage_fee !== undefined && { usage_fee: Number(updatedData.usage_fee) }),
+      ...(updatedData.bonus_money !== undefined && { bonus_money: Number(updatedData.bonus_money) }),
+    };
+
     const { data, error } = await supabase
       .from('tournaments')
       .update(saveData)
       .eq('id', tournament.id)
       .select()
       .single();
+
     if (error) {
       console.error('Error updating tournament:', error.message);
       setError('Failed to save changes.');
@@ -104,10 +77,59 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
     }
   };
 
-  const entryFee = parseFloat(formData.entry_fee); // Parse for calculations
-  const barContribution = parseFloat(formData.bar_contribution); // Parse for calculations
-  const usageFee = parseFloat(formData.usage_fee); // Parse for calculations
-  const bonusMoney = parseFloat(formData.bonus_money); // Parse for calculations
+  const debouncedUpdate = debounce(updateDatabase, 500);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
+
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [name]:
+          type === 'checkbox'
+            ? checked
+            : name === 'payout_spots'
+            ? parseInt(value, 10)
+            : name === 'entry_fee' || name === 'bar_contribution' || name === 'usage_fee' || name === 'bonus_money'
+            ? parseFloat(value || '0').toFixed(2)
+            : value,
+      };
+
+      if (name === 'tournament_type' && !value.trim()) {
+        setError('Tournament Type is required.');
+      } else if (name === 'location' && !value.trim()) {
+        setError('Location is required.');
+      } else {
+        setError(null);
+      }
+
+      debouncedUpdate({
+        [name]:
+          type === 'checkbox'
+            ? checked
+            : name === 'payout_spots'
+            ? parseInt(value, 10)
+            : name === 'entry_fee' || name === 'bar_contribution' || name === 'usage_fee' || name === 'bonus_money'
+            ? parseFloat(value || '0')
+            : value,
+      });
+
+      return updated;
+    });
+  };
+
+  const getOrdinalSuffix = (num: number): string => {
+    const suffixes = ['th', 'st', 'nd', 'rd'];
+    const remainder = num % 100;
+    const relevant = remainder % 10;
+    return remainder > 10 && remainder < 20 ? 'th' : suffixes[relevant] || 'th';
+  };
+
+  const entryFee = parseFloat(formData.entry_fee);
+  const barContribution = parseFloat(formData.bar_contribution);
+  const usageFee = parseFloat(formData.usage_fee);
+  const bonusMoney = parseFloat(formData.bonus_money);
   const payoutSpots = formData.payout_spots;
 
   const totalEntryFees = tournament.players.length * entryFee;
@@ -187,10 +209,14 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
       {error && <p className="text-red-500 text-center mb-4">{error}</p>}
       <div className="tournament-details mt-4 bg-[var(--card-background)] p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="overflow-auto">
-          <h3 className="text-md font-bold text-[var(--card-title)] mb-2">Settings</h3>
           <table className="w-full border-collapse">
             <tbody>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
+              <tr className="border-b border-[var(--card-background)]">
+                <td colSpan={2} className="text-md font-bold text-[var(--card-title)] align-middle">
+                  <div className="h-[59px] flex items-center">Settings</div>
+                </td>
+              </tr>
+              <tr className="border-b border-[var(--card-background)]">
                 <td className="text-[var(--card-text)] align-middle">
                   <div className="h-[59px] flex items-center">Tournament Name:</div>
                 </td>
@@ -206,7 +232,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                   </div>
                 </td>
               </tr>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
+              <tr className="border-b border-[var(--card-background)]">
                 <td className="text-[var(--card-text)] align-middle">
                   <div className="h-[59px] flex items-center">Date:</div>
                 </td>
@@ -222,7 +248,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                   </div>
                 </td>
               </tr>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
+              <tr className="border-b border-[var(--card-background)]">
                 <td className="text-[var(--card-text)] align-middle">
                   <div className="h-[59px] flex items-center">Location:</div>
                 </td>
@@ -235,7 +261,6 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                       required
                       className="p-2 h-[42px] w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none"
                     >
-                      <option value="">Select a location</option>
                       {locations.map((loc) => (
                         <option key={loc.id} value={loc.name}>
                           {loc.name}
@@ -246,7 +271,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                   </div>
                 </td>
               </tr>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
+              <tr className="border-b border-[var(--card-background)]">
                 <td className="text-[var(--card-text)] align-middle">
                   <div className="h-[59px] flex items-center">Tournament Type:</div>
                 </td>
@@ -259,17 +284,16 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                       required
                       className="p-2 h-[42px] w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none"
                     >
-                      <option value="">Select a type</option>
-                      <option value="A/B Draw">A/B Draw</option>
-                      <option value="Blind Draw">Blind Draw</option>
-                      <option value="Partner Bring">Partner Bring</option>
-                      <option value="Parity Draw">Parity Draw</option>
-                      <option value="Low Player Pick">Low Player Pick</option>
+                      {tournamentTypes.map((type) => (
+                        <option key={type.fileName} value={type.name}>
+                          {type.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </td>
               </tr>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
+              <tr className="border-b border-[var(--card-background)]">
                 <td className="text-[var(--card-text)] align-middle">
                   <div className="h-[59px] flex items-center">Tournament Code:</div>
                 </td>
@@ -285,7 +309,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                   </div>
                 </td>
               </tr>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
+              <tr className="border-b border-[var(--card-background)]">
                 <td className="text-[var(--card-text)] align-middle">
                   <div className="h-[59px] flex items-center">Entry Cost:</div>
                 </td>
@@ -306,7 +330,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                   </div>
                 </td>
               </tr>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
+              <tr className="border-b border-[var(--card-background)]">
                 <td className="text-[var(--card-text)] align-middle">
                   <div className="h-[59px] flex items-center">Bar Input:</div>
                 </td>
@@ -327,7 +351,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                   </div>
                 </td>
               </tr>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
+              <tr className="border-b border-[var(--card-background)]">
                 <td className="text-[var(--card-text)] align-middle">
                   <div className="h-[59px] flex items-center">Usage Fee:</div>
                 </td>
@@ -348,7 +372,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                   </div>
                 </td>
               </tr>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
+              <tr className="border-b border-[var(--card-background)]">
                 <td className="text-[var(--card-text)] align-middle">
                   <div className="h-[59px] flex items-center">Bonus Money:</div>
                 </td>
@@ -369,7 +393,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                   </div>
                 </td>
               </tr>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
+              <tr className="border-b border-[var(--card-background)]">
                 <td className="text-[var(--card-text)] align-middle">
                   <div className="h-[59px] flex items-center">Payout Spots:</div>
                 </td>
@@ -386,94 +410,110 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                   </div>
                 </td>
               </tr>
+              <tr className="border-b border-[var(--card-background)]">
+                <td className="text-[var(--card-text)] align-middle">
+                  <div className="h-[59px] flex items-center">Tournament Completed:</div>
+                </td>
+                <td className="align-middle">
+                  <div className="h-[59px] flex items-center">
+                    <input
+                      type="checkbox"
+                      name="tournament_completed"
+                      checked={formData.tournament_completed}
+                      onChange={handleInputChange}
+                      className="h-5 w-5 border-1 border-[var(--form-border)] rounded accent-[var(--form-checkbox-checked)] focus:outline-none"
+                    />
+                  </div>
+                </td>
+              </tr>
             </tbody>
           </table>
-          <div className="mt-4">
-            <Button onClick={handleSave} className="w-full" disabled={!!error}>
-              Save Changes
-            </Button>
-          </div>
         </div>
 
         <div className="overflow-auto">
-          <h3 className="text-md font-bold text-[var(--card-title)] mb-2">Summary</h3>
           <table className="w-full border-collapse">
             <tbody>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
-                <td className="text-[var(--card-text)] align-middle">
+              <tr className="border-b border-[var(--card-background)]">
+                <td colSpan={2} className="text-md font-bold text-[var(--card-title)] align-middle w-1/2">
+                  <div className="h-[59px] flex items-center">Summary</div>
+                </td>
+              </tr>
+              <tr className="border-b border-[var(--card-highlight)]">
+                <td className="text-[var(--card-text)] align-middle w-1/2">
                   <div className="h-[59px] flex items-center">Entry Costs:</div>
                 </td>
-                <td className="align-middle">
+                <td className="align-middle w-1/2">
                   <div className="h-[59px] flex items-center">{entryFeesDisplay}</div>
                 </td>
               </tr>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
-                <td className="text-[var(--card-text)] align-middle">
+              <tr className="border-b border-[var(--card-highlight)]">
+                <td className="text-[var(--card-text)] align-middle w-1/2">
                   <div className="h-[59px] flex items-center">Bar Input:</div>
                 </td>
-                <td className="align-middle">
+                <td className="align-middle w-1/2">
                   <div className="h-[59px] flex items-center">
                     ${totalBarFees.toFixed(2)}
                   </div>
                 </td>
               </tr>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
-                <td className="text-[var(--card-text)] align-middle">
+              <tr className="border-b border-[var(--card-highlight)]">
+                <td className="text-[var(--card-text)] align-middle w-1/2">
                   <div className="h-[59px] flex items-center">Usage Fees:</div>
                 </td>
-                <td className="align-middle">
+                <td className="align-middle w-1/2">
                   <div className="h-[59px] flex items-center">
                     ${totalUsageFees.toFixed(2)}
                   </div>
                 </td>
               </tr>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
-                <td className="text-[var(--card-text)] align-middle">
+              <tr className="border-b border-[var(--card-highlight)]">
+                <td className="text-[var(--card-text)] align-middle w-1/2">
                   <div className="h-[59px] flex items-center">Bonus Money:</div>
                 </td>
-                <td className="align-middle">
+                <td className="align-middle w-1/2">
                   <div className="h-[59px] flex items-center">
                     ${parseFloat((formData.bonus_money ?? 0).toString()).toFixed(2)}
                   </div>
                 </td>
               </tr>
-              <tr className="border-b border-[var(--card-highlight)] last:border-b-0">
-                <td className="text-[var(--card-text)] align-middle">
+              <tr className="border-b border-[var(--card-highlight)]">
+                <td className="text-[var(--card-text)] align-middle w-1/2">
                   <div className="h-[59px] flex items-center">Total Prize Pool:</div>
                 </td>
-                <td className="align-middle">
+                <td className="align-middle w-1/2">
                   <div className="h-[59px] flex items-center">
                     ${totalPrizePool.toFixed(2)}
                   </div>
                 </td>
               </tr>
+              <tr className="border-b border-[var(--card-background)]">
+                <td colSpan={2} className="h-[59px]"></td>
+              </tr>
+              <tr className="border-b border-[var(--card-background)]">
+                <td colSpan={2} className="text-md font-bold text-[var(--card-title)] align-middle w-1/2">
+                  <div className="h-[59px] flex items-center">Suggested Payouts</div>
+                </td>
+              </tr>
+              {roundedPayouts.map((payout, index) => {
+                const perPlayer = payout / 2;
+                const isLastRow = index === roundedPayouts.length - 1;
+                return (
+                  <tr key={index} className={`border-b ${isLastRow ? 'border-[var(--card-background)]' : 'border-[var(--card-highlight)]'}`}>
+                    <td className="text-[var(--card-text)] align-middle w-1/2">
+                      <div className="h-[59px] flex items-center">
+                        {index + 1 + getOrdinalSuffix(index + 1)} Place
+                      </div>
+                    </td>
+                    <td className="align-middle w-1/2">
+                      <div className="h-[59px] flex items-center">
+                        ${payout.toFixed(2)} (${perPlayer.toFixed(2)} each)
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
-
-          <div className="mt-4 overflow-auto bg-[var(--color2)] p-4 rounded-md border border-[var(--card-highlight)] shadow-sm">
-            <h3 className="text-md font-bold text-[var(--card-title)] mb-2 text-center">Suggested Payouts</h3>
-            <table className="w-full border-collapse">
-              <tbody>
-                {roundedPayouts.map((payout, index) => {
-                  const perPlayer = payout / 2; // Assuming 2 players per team
-                  return (
-                    <tr key={index}>
-                      <td className="text-[var(--card-text)] align-middle w-1/2 text-center">
-                        <div className="h-[59px] flex items-center justify-center">
-                          {index + 1 + getOrdinalSuffix(index + 1)} Place
-                        </div>
-                      </td>
-                      <td className="align-middle w-1/2 text-center">
-                        <div className="h-[59px] flex items-center justify-center">
-                          ${payout.toFixed(2)} (${perPlayer.toFixed(2)} each)
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
         </div>
       </div>
     </section>

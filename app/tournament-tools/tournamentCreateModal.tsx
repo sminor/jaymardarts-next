@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
 import Button from '@/components/Button';
 import { PostgrestError } from '@supabase/supabase-js';
-import { Tournament } from './types'; // Import Tournament only, Location not needed here
+import { Tournament } from './types';
+import { tournamentTypes } from './teamGenerators'; // Import the registry
 
 export const TournamentCreateModal: React.FC<{
   onClose: (newTournament?: Tournament) => void;
@@ -156,11 +157,11 @@ export const TournamentCreateModal: React.FC<{
               <option value="" disabled>
                 Select a type
               </option>
-              <option value="A/B Draw">A/B Draw</option>
-              <option value="Blind Draw">Blind Draw</option>
-              <option value="Partner Bring">Partner Bring</option>
-              <option value="Parity Draw">Parity Draw</option>
-              <option value="Low Player Pick">Low Player Pick</option>
+              {tournamentTypes.map((type) => (
+                <option key={type.fileName} value={type.name}>
+                  {type.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>

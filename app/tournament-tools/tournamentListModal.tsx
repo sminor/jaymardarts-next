@@ -74,15 +74,30 @@ const TournamentListModal: React.FC<TournamentListModalProps> = ({ onClose }) =>
                   <tr
                     key={t.id}
                     onClick={() => onClose(t)}
-                    className="odd:bg-[var(--table-odd-row)] even:bg-[var(--table-even-row)] border-none cursor-pointer hover:bg-[var(--color2)]"
+                    className={`odd:bg-[var(--table-odd-row)] even:bg-[var(--table-even-row)] border-none cursor-pointer hover:bg-[var(--color2)]`}
                   >
-                    <td className="text-[var(--card-text)] p-2 whitespace-nowrap">{t.name}</td>
-                    <td className="text-[var(--card-text)] p-2 whitespace-nowrap">{t.date}</td>
-                    <td className="text-[var(--card-text)] p-2 whitespace-nowrap">{t.location}</td>
-                    <td className="text-[var(--card-text)] p-2 whitespace-nowrap">{t.tournament_type || 'N/A'}</td>
-                    <td className="text-[var(--card-text)] p-2 whitespace-nowrap">{t.players.length}</td>
-                    <td className="text-[var(--card-text)] p-2 whitespace-nowrap">{t.teams.length}</td>
-                    <td className="text-[var(--card-text)] p-2 whitespace-nowrap">${calculatePrizePool(t).toFixed(2)}</td>
+                    <td className={`p-2 whitespace-nowrap text-[var(--card-text)] ${t.tournament_completed ? 'opacity-50' : 'opacity-100'}`}>
+                      {!t.tournament_completed && <span className="inline-block w-2 h-2 mr-2 bg-[var(--color5)] rounded-full"></span>}
+                      {t.name}
+                    </td>
+                    <td className={`p-2 whitespace-nowrap text-[var(--card-text)] ${t.tournament_completed ? 'opacity-50' : 'opacity-100'}`}>
+                      {t.date}
+                    </td>
+                    <td className={`p-2 whitespace-nowrap text-[var(--card-text)] ${t.tournament_completed ? 'opacity-50' : 'opacity-100'}`}>
+                      {t.location}
+                    </td>
+                    <td className={`p-2 whitespace-nowrap text-[var(--card-text)] ${t.tournament_completed ? 'opacity-50' : 'opacity-100'}`}>
+                      {t.tournament_type || 'N/A'}
+                    </td>
+                    <td className={`p-2 whitespace-nowrap text-[var(--card-text)] ${t.tournament_completed ? 'opacity-50' : 'opacity-100'}`}>
+                      {t.players.length}
+                    </td>
+                    <td className={`p-2 whitespace-nowrap text-[var(--card-text)] ${t.tournament_completed ? 'opacity-50' : 'opacity-100'}`}>
+                      {t.teams.length}
+                    </td>
+                    <td className={`p-2 whitespace-nowrap text-[var(--card-text)] ${t.tournament_completed ? 'opacity-50' : 'opacity-100'}`}>
+                      ${calculatePrizePool(t).toFixed(2)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

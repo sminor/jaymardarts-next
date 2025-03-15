@@ -25,4 +25,5 @@ export interface Player {
     players: { name: string; ppd: number; mpr: number; paid: boolean }[];
     teams: { name: string; players: string[] }[];
     created_at: string;
+    tournament_completed?: boolean;
   }

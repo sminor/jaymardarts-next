@@ -77,7 +77,17 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
 
   // Keyboard navigation for search results with scrolling
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Handle Escape key unconditionally
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setSearchTerm('');
+      setSelectedIndex(-1);
+      return; // Exit early after handling Escape
+    }
+
+    // Only proceed with navigation/addition if there are filtered players
     if (filteredPlayers.length === 0) return;
+
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setSelectedIndex((prev) => {
@@ -111,10 +121,6 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
         }
         return -1; // Reset if no players remain
       });
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      setSearchTerm('');
-      setSelectedIndex(-1);
     }
   };
 
@@ -143,13 +149,13 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
       setFormError('Name, PPD, and MPR are required, and PPD/MPR must be positive numbers.');
       return;
     }
-    const updatedPlayers = [...tournament.players, { name: newPlayer.name.trim(), ppd: ppdNum, mpr: mprNum, paid: false }];
+    const updatedPlayers = [{ name: newPlayer.name.trim(), ppd: ppdNum, mpr: mprNum, paid: false }, ...tournament.players];
     updatePlayersInDatabase(updatedPlayers);
     setNewPlayer({ name: '', ppd: '', mpr: '' });
   };
 
   const addPlayer = (player: Player) => {
-    const updatedPlayers = [...tournament.players, { ...player, paid: false }];
+    const updatedPlayers = [{ ...player, paid: false }, ...tournament.players];
     updatePlayersInDatabase(updatedPlayers);
   };
 
@@ -198,7 +204,7 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
           type="text"
           placeholder="Search players..."
           value={searchTerm}
-          onChange={handleSearchChange} // Updated to use new handler
+          onChange={handleSearchChange}
           onKeyDown={handleKeyDown}
           className="p-2 w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none"
         />
@@ -280,7 +286,7 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                     type="checkbox"
                     checked={player.paid}
                     onChange={() => togglePaidStatus(player)}
-                    className="h-5 w-5 border-1 border-[var(--form-border)] rounded bg-[var(--color4)] checked:bg-[var(--color7)] accent-[var(--color7)] focus:outline-none"
+                    className="h-5 w-5 border-1 border-[var(--form-border)] rounded accent-[var(--form-checkbox-checked)] focus:outline-none"
                   />
                 </td>
               </tr>
