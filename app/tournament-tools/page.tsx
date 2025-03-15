@@ -1,4 +1,3 @@
-// app/tournament-tools/page.tsx
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
@@ -20,36 +19,48 @@ export default function TournamentTools() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Details');
+  const [isLoading, setIsLoading] = useState(true); // Unified loading state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [permissions, setPermissions] = useState<string[] | null>(null); // null means loading
+  const [permissions, setPermissions] = useState<string[]>([]); // Default to empty array, no null
 
   useEffect(() => {
     const checkAuthAndPermissions = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const authenticated = !!session;
+        setIsAuthenticated(authenticated);
 
-      if (session) {
-        const { data, error } = await supabase
-          .from('authorized_users')
-          .select('permissions')
-          .eq('id', session.user.id)
-          .single();
+        if (authenticated && session) {
+          const { data, error } = await supabase
+            .from('authorized_users')
+            .select('permissions')
+            .eq('id', session.user.id)
+            .single();
 
-        if (error || !data) {
-          setPermissions([]); // No entry or error means no permissions
+          if (error || !data) {
+            setPermissions([]); // No entry or error means no permissions
+          } else {
+            setPermissions(data.permissions || []);
+          }
         } else {
-          setPermissions(data.permissions || []);
+          setPermissions([]);
         }
-      } else {
-        setPermissions([]);
+      } catch (err) {
+        console.error('Error checking auth and permissions:', err);
+        setPermissions([]); // Fallback to no permissions on error
+      } finally {
+        setIsLoading(false); // Always set loading to false when done
       }
     };
 
     checkAuthAndPermissions();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
-      if (session) {
+      const authenticated = !!session;
+      setIsAuthenticated(authenticated);
+      setIsLoading(true); // Reset loading state on auth change
+
+      if (authenticated && session) {
         supabase
           .from('authorized_users')
           .select('permissions')
@@ -57,9 +68,11 @@ export default function TournamentTools() {
           .single()
           .then(({ data, error }) => {
             setPermissions(error || !data ? [] : data.permissions || []);
+            setIsLoading(false);
           });
       } else {
         setPermissions([]);
+        setIsLoading(false);
       }
     });
 
@@ -79,32 +92,36 @@ export default function TournamentTools() {
     if (tournament) setSelectedTournament(tournament);
   };
   const handleUpdateTournament = (updatedTournament: Tournament) => setSelectedTournament(updatedTournament);
-  const handleLogin = () => setIsAuthenticated(true);
+  const handleLogin = () => {
+    setIsLoading(true); // Reset to loading during login
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsAuthenticated(false);
     setPermissions([]);
+    setIsLoading(false);
   };
+
+  // Show loading state until everything is resolved
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center min-h-screen">
+        <NavBar currentPage="tournament-tools" hideButtons={true} />
+        <div className="w-full max-w-screen-xl mx-auto px-4 flex-grow flex items-center justify-center">
+          <p>Loading...</p>
+        </div>
+        <Footer isAuthenticated={false} onLogout={handleLogout} />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Login onLogin={handleLogin} />;
   }
 
-  if (permissions === null) {
-    return (
-      <div className="flex flex-col items-center min-h-screen">
-        <NavBar currentPage="tournament-tools" hideButtons={true} />
-        <div className="w-full max-w-screen-xl mx-auto px-4 flex-grow flex items-center justify-center">
-          <p>Loading permissions...</p>
-        </div>
-        <Footer isAuthenticated={isAuthenticated} onLogout={handleLogout} />
-      </div>
-    );
-  }
-
-  // Only show unauthorized message after permissions are loaded and confirmed
-  if (permissions.length > 0 && !permissions.includes('tournament_tools')) {
+  // Require 'tournament_tools' permission explicitly
+  if (!permissions.includes('tournament_tools')) {
     return (
       <div className="flex flex-col items-center min-h-screen">
         <NavBar currentPage="tournament-tools" hideButtons={true} />
