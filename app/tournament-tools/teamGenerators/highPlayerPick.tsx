@@ -76,7 +76,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   );
 };
 
-const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTournament: Tournament) => void; isReadOnly?: boolean }> = ({
+const HighPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTournament: Tournament) => void; isReadOnly?: boolean }> = ({
   tournament,
   onUpdate,
   isReadOnly = false,
@@ -102,19 +102,19 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
   }, []);
 
   const generateTeams = useCallback((aPlayersList: (Tournament['players'][0] | null)[], bPlayersList: (Tournament['players'][0] | null)[]) => {
-    return bPlayersList
-      .map((bPlayer, index) => {
-        const aPlayer = aPlayersList[index];
-        if (bPlayer) {
-          const bFirstName = bPlayer.name.split(' ')[0];
-          if (aPlayer) {
-            const aFirstName = aPlayer.name.split(' ')[0];
+    return aPlayersList
+      .map((aPlayer, index) => {
+        const bPlayer = bPlayersList[index];
+        if (aPlayer) {
+          const aFirstName = aPlayer.name.split(' ')[0];
+          if (bPlayer) {
+            const bFirstName = bPlayer.name.split(' ')[0];
             return { name: `${aFirstName} and ${bFirstName}`, players: [aPlayer.name, bPlayer.name] };
           }
-          return { name: bFirstName, players: [bPlayer.name] };
-        } else if (aPlayer) {
-          const aFirstName = aPlayer.name.split(' ')[0];
           return { name: aFirstName, players: [aPlayer.name] };
+        } else if (bPlayer) {
+          const bFirstName = bPlayer.name.split(' ')[0];
+          return { name: bFirstName, players: [bPlayer.name] };
         }
         return null;
       })
@@ -157,9 +157,9 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
       });
 
       const middleIndex = Math.ceil(sortedPlayers.length / 2);
-      const newAPlayers: (Tournament['players'][0] | null)[] = new Array(middleIndex).fill(null); // Placeholders
-      const newBPlayers: (Tournament['players'][0] | null)[] = sortedPlayers.slice(middleIndex).reverse(); // Bottom half, reversed
-      const newAvailablePlayers: (Tournament['players'][0] | null)[] = [null, ...sortedPlayers.slice(0, middleIndex)]; // Remove placeholder at top, then high players
+      const newAPlayers: (Tournament['players'][0] | null)[] = sortedPlayers.slice(0, middleIndex); // Top half (high players)
+      const newBPlayers: (Tournament['players'][0] | null)[] = new Array(middleIndex).fill(null); // Placeholders
+      const newAvailablePlayers: (Tournament['players'][0] | null)[] = [null, ...sortedPlayers.slice(middleIndex).reverse()]; // Remove placeholder at top, then low players
 
       setAPlayers(newAPlayers);
       setBPlayers(newBPlayers);
@@ -177,12 +177,23 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
       currentPlayerNames.size === teamPlayerNames.size &&
       [...currentPlayerNames].every(name => teamPlayerNames.has(name));
 
+    console.log('useEffect triggered:', {
+      currentPlayerNames: [...currentPlayerNames],
+      teamPlayerNames: [...teamPlayerNames],
+      playersMatchTeams,
+      teamsLength: tournament.teams.length,
+      initialized: initializedTournamentId.current === tournament.id,
+      isReadOnly,
+    });
+
     if ((!playersMatchTeams || tournament.teams.length === 0) && tournament.players.length > 0 && !isReadOnly) {
+      console.log('Regenerating teams due to player list mismatch or empty teams');
       (async () => {
         await dividePlayers('combo');
         initializedTournamentId.current = tournament.id;
       })();
     } else if (initializedTournamentId.current !== tournament.id && tournament.players.length > 0) {
+      console.log('Loading existing teams');
       const newAPlayers: (Tournament['players'][0] | null)[] = [];
       const newBPlayers: (Tournament['players'][0] | null)[] = [];
       const allPlayers = [...tournament.players];
@@ -196,9 +207,9 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
           newBPlayers.push(bPlayer || { name: team.players[1], ppd: 0, mpr: 0, paid: false });
           usedPlayers.push(team.players[0], team.players[1]);
         } else if (team.players.length === 1) {
-          const bPlayer = tournament.players.find(p => p.name === team.players[0]);
-          newAPlayers.push(null); // No A player
-          newBPlayers.push(bPlayer || { name: team.players[0], ppd: 0, mpr: 0, paid: false });
+          const aPlayer = tournament.players.find(p => p.name === team.players[0]);
+          newAPlayers.push(aPlayer || { name: team.players[0], ppd: 0, mpr: 0, paid: false });
+          newBPlayers.push(null); // No B player
           usedPlayers.push(team.players[0]);
         }
       });
@@ -240,7 +251,7 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
 
       const [movedPlayer] = sourceList.splice(fromIndex, 1);
 
-      if (!movedPlayer) return; // Ignore dragging placeholders
+      if (!movedPlayer) return;
 
       if (fromListType === toListType) {
         sourceList.splice(toIndex, 0, movedPlayer);
@@ -284,7 +295,7 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex flex-col gap-4">
-        <h2 className="text-xl font-semibold text-[var(--text-highlight)]">Low Player Pick</h2>
+        <h2 className="text-xl font-semibold text-[var(--text-highlight)]">High Player Pick</h2>
         {error && !isReadOnly && <p className="text-red-500 text-center">{error}</p>}
         <div className="flex flex-col gap-4">
           <div className="text-[var(--card-text)]">
@@ -374,4 +385,4 @@ const LowPlayerPickTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedT
   );
 };
 
-export default LowPlayerPickTeams;
+export default HighPlayerPickTeams;

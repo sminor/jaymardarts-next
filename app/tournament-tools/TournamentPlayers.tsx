@@ -13,6 +13,7 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
   const [newPlayer, setNewPlayer] = useState({ name: '', ppd: '', mpr: '' });
   const [formError, setFormError] = useState<string | null>(null);
   const searchResultsRef = useRef<HTMLUListElement>(null); // Ref for scrolling
+  const isReadOnly = tournament.tournament_completed ?? false; // Determine read-only state
 
   // Fetch and scrape players once on mount
   useEffect(() => {
@@ -67,16 +68,18 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
 
   // Auto-select first search result when results first appear
   useEffect(() => {
-    if (filteredPlayers.length > 0 && selectedIndex === -1) {
+    if (!isReadOnly && filteredPlayers.length > 0 && selectedIndex === -1) {
       setSelectedIndex(0); // Select first result only if no selection exists
       if (searchResultsRef.current) {
         searchResultsRef.current.children[0]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     }
-  }, [filteredPlayers, selectedIndex]);
+  }, [filteredPlayers, selectedIndex, isReadOnly]);
 
   // Keyboard navigation for search results with scrolling
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (isReadOnly) return; // Disable keyboard navigation in read-only mode
+
     // Handle Escape key unconditionally
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -126,6 +129,7 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
 
   // Handle search input change and reset selectedIndex to 0 when search term becomes empty
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isReadOnly) return; // Prevent changes in read-only mode
     const newSearchTerm = e.target.value;
     setSearchTerm(newSearchTerm);
     if (!newSearchTerm.trim() && filteredPlayers.length > 0) {
@@ -137,12 +141,14 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
   };
 
   const handleNewPlayerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isReadOnly) return; // Prevent changes in read-only mode
     const { name, value } = e.target;
     setNewPlayer((prev) => ({ ...prev, [name]: value }));
     setFormError(null);
   };
 
   const addNewPlayer = () => {
+    if (isReadOnly) return; // Prevent adding in read-only mode
     const ppdNum = parseFloat(newPlayer.ppd);
     const mprNum = parseFloat(newPlayer.mpr);
     if (!newPlayer.name.trim() || !newPlayer.ppd || !newPlayer.mpr || isNaN(ppdNum) || isNaN(mprNum) || ppdNum <= 0 || mprNum <= 0) {
@@ -155,18 +161,19 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
   };
 
   const addPlayer = (player: Player) => {
+    if (isReadOnly) return; // Prevent adding in read-only mode
     const updatedPlayers = [{ ...player, paid: false }, ...tournament.players];
     updatePlayersInDatabase(updatedPlayers);
   };
 
   const removePlayer = (player: Player) => {
-    if (!player.paid) {
-      const updatedPlayers = tournament.players.filter((p) => p.name !== player.name);
-      updatePlayersInDatabase(updatedPlayers);
-    }
+    if (isReadOnly || player.paid) return; // Prevent removal in read-only mode or if paid
+    const updatedPlayers = tournament.players.filter((p) => p.name !== player.name);
+    updatePlayersInDatabase(updatedPlayers);
   };
 
   const togglePaidStatus = (player: Player) => {
+    if (isReadOnly) return; // Prevent toggling in read-only mode
     const updatedPlayers = tournament.players.map((p) =>
       p.name === player.name ? { ...p, paid: !p.paid } : p
     );
@@ -206,9 +213,10 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
           value={searchTerm}
           onChange={handleSearchChange}
           onKeyDown={handleKeyDown}
-          className="p-2 w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none"
+          disabled={isReadOnly}
+          className={`p-2 w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
         />
-        {searchTerm && filteredPlayers.length > 0 && (
+        {!isReadOnly && searchTerm && filteredPlayers.length > 0 && (
           <ul ref={searchResultsRef} className="absolute z-10 mt-0.5 w-full max-h-40 overflow-y-auto scrollbar-custom border-0 rounded-md bg-[var(--form-background)] shadow-lg">
             {padList(filteredPlayers, filteredPlayers.length === 1 ? 3 : 4).map((player, index) => (
               <li
@@ -231,7 +239,8 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
           placeholder="Name"
           value={newPlayer.name}
           onChange={handleNewPlayerChange}
-          className="p-2 w-1/2 border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none"
+          disabled={isReadOnly}
+          className={`p-2 w-1/2 border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
         />
         <input
           type="text"
@@ -241,7 +250,8 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
           value={newPlayer.ppd}
           onChange={handleNewPlayerChange}
           pattern="\d+(\.\d{1,2})?"
-          className="p-2 w-1/6 border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none"
+          disabled={isReadOnly}
+          className={`p-2 w-1/6 border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
         />
         <input
           type="text"
@@ -251,17 +261,19 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
           value={newPlayer.mpr}
           onChange={handleNewPlayerChange}
           pattern="\d+(\.\d{1,2})?"
-          className="p-2 w-1/6 border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none"
+          disabled={isReadOnly}
+          className={`p-2 w-1/6 border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
         />
         <Button
           onClick={addNewPlayer}
           icon={<FaUserPlus size={20} aria-hidden="true" />}
-          className="p-2 h-10.5 w-1/6"
+          className={`p-2 h-10.5 w-1/6 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
           ariaLabel="Add new player"
+          disabled={isReadOnly}
         >
         </Button>
       </div>
-      {formError && <p className="text-red-500 text-sm mt-4 text-center">{formError}</p>}
+      {formError && !isReadOnly && <p className="text-red-500 text-sm mt-4 text-center">{formError}</p>}
       <div className="mt-4">
         <h3 className="text-md text-[var(--card-title)]">Tournament Players</h3>
         <table className="w-full mt-2 border-collapse">
@@ -276,7 +288,10 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
           <tbody>
             {tournament.players.map((player, index) => (
               <tr key={index} className="odd:bg-[var(--table-odd-row)] even:bg-[var(--table-even-row)]">
-                <td className="p-2 text-[var(--card-text)]" onClick={() => removePlayer(player)}>
+                <td
+                  className={`p-2 text-[var(--card-text)] ${!isReadOnly && !player.paid ? 'cursor-pointer hover:text-[var(--text-highlight)]' : 'cursor-default'}`}
+                  onClick={() => removePlayer(player)}
+                >
                   {player.name}
                 </td>
                 <td className="p-2 text-[var(--card-text)]">{player.ppd.toFixed(2)}</td>
@@ -286,7 +301,8 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                     type="checkbox"
                     checked={player.paid}
                     onChange={() => togglePaidStatus(player)}
-                    className="h-5 w-5 border-1 border-[var(--form-border)] rounded accent-[var(--form-checkbox-checked)] focus:outline-none"
+                    disabled={isReadOnly}
+                    className={`h-5 w-5 border-1 border-[var(--form-border)] rounded accent-[var(--form-checkbox-checked)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                   />
                 </td>
               </tr>

@@ -1,19 +1,18 @@
 'use client';
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { FaTools, FaTrashAlt } from 'react-icons/fa';
+import { FaTools, FaSyncAlt } from 'react-icons/fa';
 import Button from '@/components/Button';
 import { supabase } from '@/utils/supabaseClient';
 import { Tournament } from './types';
 import { tournamentTypes } from './teamGenerators';
 
-// Define the props type for team generator components
 type TeamGeneratorProps = {
   tournament: Tournament;
   onUpdate: (updatedTournament: Tournament) => void;
+  isReadOnly?: boolean;
 };
 
-// Dynamic import mapping with explicit typing
 const teamGeneratorComponents: Record<string, React.ComponentType<TeamGeneratorProps>> = Object.fromEntries(
   tournamentTypes.map(({ name, fileName }) => [
     name,
@@ -25,7 +24,10 @@ const TournamentTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTour
   tournament,
   onUpdate,
 }) => {
-  const clearTeams = async () => {
+  const isReadOnly = tournament.tournament_completed ?? false;
+
+  const regenerateTeams = async () => {
+    if (isReadOnly) return;
     try {
       const { error } = await supabase
         .from('tournaments')
@@ -33,15 +35,15 @@ const TournamentTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTour
         .eq('id', tournament.id);
 
       if (error) {
-        console.error('Error clearing teams in database:', error.message);
-        alert('Failed to clear teams. Please try again.');
+        console.error('Error clearing teams for regeneration:', error.message);
+        alert('Failed to regenerate teams. Please try again.');
         return;
       }
 
       const updatedTournament = { ...tournament, teams: [] };
-      onUpdate(updatedTournament);
+      onUpdate(updatedTournament); // This should trigger regeneration in the generator
     } catch (err) {
-      console.error('Unexpected error clearing teams:', err);
+      console.error('Unexpected error regenerating teams:', err);
       alert('An unexpected error occurred. Please try again.');
     }
   };
@@ -51,54 +53,30 @@ const TournamentTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTour
       return <p className="text-[var(--card-text)] text-center">Unsupported tournament type: {tournament.tournament_type || 'None'}</p>;
     }
     const Component = teamGeneratorComponents[tournament.tournament_type];
-    return <Component tournament={tournament} onUpdate={onUpdate} />;
+    return <Component tournament={tournament} onUpdate={onUpdate} isReadOnly={isReadOnly} />;
   };
 
   return (
     <section className="p-4">
       <div className="mb-4">{renderTeamGenerator()}</div>
-      <div className="mt-4">
-        <table className="w-full mt-2 border-collapse">
-          <thead>
-            <tr className="border-b-2 border-[var(--card-highlight)]">
-              <th className="text-left text-[var(--card-text)] p-2">Team Name</th>
-              <th className="text-left text-[var(--card-text)] p-2">Players</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tournament.teams.length === 0 ? (
-              <tr>
-                <td colSpan={2} className="p-2 text-[var(--card-text)] text-center">
-                  No teams generated yet.
-                </td>
-              </tr>
-            ) : (
-              tournament.teams.map((team, index) => (
-                <tr key={index} className="odd:bg-[var(--table-odd-row)] even:bg-[var(--table-even-row)]">
-                  <td className="p-2 text-[var(--card-text)]">{team.name}</td>
-                  <td className="p-2 text-[var(--card-text)]">{team.players.join(', ')}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-        <div className="flex justify-between mt-8">
-          <TournamentHelper tournament={tournament} />
-          <Button
-            onClick={clearTeams}
-            icon={<FaTrashAlt />}
-            iconPosition="left"
-            className="w-auto bg-[var(--color5)]"
-          >
-            Clear Teams
-          </Button>
-        </div>
+      <div className="flex justify-between mt-8">
+        <TournamentHelper tournament={tournament} isReadOnly={isReadOnly} />
+        <Button
+          onClick={regenerateTeams}
+          icon={<FaSyncAlt />}
+          iconPosition="left"
+          className={`w-auto bg-[var(--color5)] ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={isReadOnly}
+        >
+          Regenerate Teams
+        </Button>
       </div>
     </section>
   );
 };
 
-export const TournamentHelper: React.FC<{ tournament: Tournament }> = ({ tournament }) => {
+// TournamentHelper remains unchanged
+export const TournamentHelper: React.FC<{ tournament: Tournament; isReadOnly?: boolean }> = ({ tournament, isReadOnly = false }) => {
   const leagueleaderWindowRef = React.useRef<Window | null>(null);
   const toolbarWindowRef = React.useRef<Window | null>(null);
 
@@ -129,18 +107,21 @@ export const TournamentHelper: React.FC<{ tournament: Tournament }> = ({ tournam
   };
 
   const openOrFocusToolbarWindow = (left: number) => {
+    if (isReadOnly) return;
+
+    const teams = tournament.teams.length > 0 ? tournament.teams : [];
+
     if (toolbarWindowRef.current && !toolbarWindowRef.current.closed) {
-      // Update existing popup with new data
-      toolbarWindowRef.current.postMessage({ type: 'updateTournament', data: tournament }, '*');
+      toolbarWindowRef.current.postMessage({ type: 'updateTournament', data: { ...tournament, teams } }, '*');
       toolbarWindowRef.current.focus();
     } else {
-      if (!tournament || !tournament.teams) {
+      if (!tournament || !tournament.players) {
         alert('Invalid tournament data.');
         return;
       }
 
       const currentYear = new Date().getFullYear();
-      const initialTournamentData = JSON.stringify(tournament);
+      const initialTournamentData = JSON.stringify({ ...tournament, teams });
       const toolbarContent = `
       <html>
         <head>
@@ -229,10 +210,8 @@ export const TournamentHelper: React.FC<{ tournament: Tournament }> = ({ tournam
               });
             }
 
-            // Initial population
             populateTeamData();
 
-            // Listen for updates from the parent window
             window.addEventListener('message', (event) => {
               if (event.data.type === 'updateTournament') {
                 teamData = event.data.data;
@@ -258,6 +237,7 @@ export const TournamentHelper: React.FC<{ tournament: Tournament }> = ({ tournam
   };
 
   const handleWindows = () => {
+    if (isReadOnly) return;
     const { leagueleaderLeft, toolbarLeft } = calculatePositions();
     openOrFocusLeagueleaderWindow(leagueleaderLeft);
     openOrFocusToolbarWindow(toolbarLeft);
@@ -268,7 +248,8 @@ export const TournamentHelper: React.FC<{ tournament: Tournament }> = ({ tournam
       onClick={handleWindows}
       icon={<FaTools />}
       iconPosition="left"
-      className="w-auto"
+      className={`w-auto ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+      disabled={isReadOnly}
     >
       Tournament Helper
     </Button>

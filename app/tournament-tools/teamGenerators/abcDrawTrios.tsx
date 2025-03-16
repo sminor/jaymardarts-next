@@ -12,8 +12,13 @@ const ItemType = 'PLAYER';
 interface PlayerCardProps {
   player: { name: string; ppd: number; mpr: number; paid: boolean };
   index: number;
-  swapPlayers: (fromIndex: number, toIndex: number, fromListType: 'aPlayers' | 'bPlayers', toListType: 'aPlayers' | 'bPlayers') => void;
-  listType: 'aPlayers' | 'bPlayers';
+  swapPlayers: (
+    fromIndex: number,
+    toIndex: number,
+    fromListType: 'aPlayers' | 'bPlayers' | 'cPlayers',
+    toListType: 'aPlayers' | 'bPlayers' | 'cPlayers'
+  ) => void;
+  listType: 'aPlayers' | 'bPlayers' | 'cPlayers';
   sortStat: 'combo' | 'ppd' | 'mpr';
   isReadOnly?: boolean;
 }
@@ -29,7 +34,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, index, swapPlayers, lis
 
   const [, drop] = useDrop({
     accept: ItemType,
-    drop(item: { index: number; listType: 'aPlayers' | 'bPlayers' }) {
+    drop(item: { index: number; listType: 'aPlayers' | 'bPlayers' | 'cPlayers' }) {
       if (!isReadOnly && (item.index !== index || item.listType !== listType)) {
         swapPlayers(item.index, index, item.listType, listType);
       }
@@ -40,26 +45,36 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, index, swapPlayers, lis
     drag(drop(ref));
   }
 
+  const tooltipText =
+    sortStat === 'combo'
+      ? `Combo: ${(player.ppd + player.mpr * 10).toFixed(2)}`
+      : sortStat === 'ppd'
+      ? `PPD: ${player.ppd.toFixed(2)}`
+      : `MPR: ${player.mpr.toFixed(2)}`;
+
   return (
     <div
       ref={ref}
-      className={`p-2 bg-[var(--drag-card-background)] rounded-md shadow-sm text-[var(--drag-card-text)] mb-2 ${isReadOnly ? 'cursor-default' : 'cursor-move'}`}
-      title={sortStat === 'combo' ? `Combo: ${(player.ppd + player.mpr * 10).toFixed(2)}` : sortStat === 'ppd' ? `PPD: ${player.ppd.toFixed(2)}` : `MPR: ${player.mpr.toFixed(2)}`}
+      className={`p-2 bg-[var(--drag-card-background)] rounded-md shadow-sm text-[var(--drag-card-text)] mb-2 ${
+        isReadOnly ? 'cursor-default' : 'cursor-move'
+      }`}
+      title={tooltipText}
     >
       {player.name}
     </div>
   );
 };
 
-const ABDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTournament: Tournament) => void; isReadOnly?: boolean }> = ({
+const AbcDrawTriosTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTournament: Tournament) => void; isReadOnly?: boolean }> = ({
   tournament,
   onUpdate,
   isReadOnly = false,
 }) => {
   const [aPlayers, setAPlayers] = useState<Tournament['players']>([]);
   const [bPlayers, setBPlayers] = useState<Tournament['players']>([]);
+  const [cPlayers, setCPlayers] = useState<Tournament['players']>([]);
   const [error, setError] = useState<string | null>(null);
-  const [activeShuffle, setActiveShuffle] = useState<'aPlayers' | 'bPlayers' | null>(null);
+  const [activeShuffle, setActiveShuffle] = useState<'aPlayers' | 'bPlayers' | 'cPlayers' | null>(null);
   const [sortStat, setSortStat] = useState<'combo' | 'ppd' | 'mpr'>('combo');
   const initializedTournamentId = useRef<string | null>(null);
 
@@ -76,11 +91,16 @@ const ABDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourname
     }
   }, []);
 
-  const generateTeams = useCallback((aPlayersList: Tournament['players'], bPlayersList: Tournament['players']) => {
+  const generateTeams = useCallback((aPlayersList: Tournament['players'], bPlayersList: Tournament['players'], cPlayersList: Tournament['players']) => {
     return aPlayersList.map((aPlayer, index) => {
       const bPlayer = bPlayersList[index];
+      const cPlayer = cPlayersList[index];
       const aFirstName = aPlayer.name.split(' ')[0];
-      if (bPlayer) {
+      if (bPlayer && cPlayer) {
+        const bFirstName = bPlayer.name.split(' ')[0];
+        const cFirstName = cPlayer.name.split(' ')[0];
+        return { name: `${aFirstName} and ${bFirstName} and ${cFirstName}`, players: [aPlayer.name, bPlayer.name, cPlayer.name] };
+      } else if (bPlayer) {
         const bFirstName = bPlayer.name.split(' ')[0];
         return { name: `${aFirstName} and ${bFirstName}`, players: [aPlayer.name, bPlayer.name] };
       }
@@ -89,10 +109,10 @@ const ABDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourname
   }, []);
 
   const updateTeamsInDB = useCallback(
-    async (aPlayersList: Tournament['players'], bPlayersList: Tournament['players']) => {
+    async (aPlayersList: Tournament['players'], bPlayersList: Tournament['players'], cPlayersList: Tournament['players']) => {
       if (isReadOnly) return;
       try {
-        const teams = generateTeams(aPlayersList, bPlayersList);
+        const teams = generateTeams(aPlayersList, bPlayersList, cPlayersList);
         console.log('Updating teams in DB:', teams);
         const { data, error } = await supabase
           .from('tournaments')
@@ -111,7 +131,7 @@ const ABDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourname
         setError('Failed to update teams in database.');
       }
     },
-    [tournament.id, generateTeams, onUpdate, isReadOnly]
+    [tournament.id, onUpdate, isReadOnly, generateTeams]
   );
 
   const dividePlayers = useCallback(
@@ -120,17 +140,19 @@ const ABDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourname
       const sortedPlayers = [...tournament.players].sort((a, b) => {
         const statA = getPlayerStat(a, stat);
         const statB = getPlayerStat(b, stat);
-        return statB - statA;
+        return statB - statA; // High to low (descending order)
       });
 
-      const middleIndex = Math.ceil(sortedPlayers.length / 2);
-      const newAPlayers = sortedPlayers.slice(0, middleIndex);
-      const newBPlayers = sortedPlayers.slice(middleIndex);
+      const third = Math.ceil(sortedPlayers.length / 3);
+      const newAPlayers = sortedPlayers.slice(0, third); // Top third (highest stats)
+      const newBPlayers = sortedPlayers.slice(third, third * 2); // Middle third
+      const newCPlayers = sortedPlayers.slice(third * 2); // Bottom third (high to low, no reverse)
 
       setAPlayers(newAPlayers);
       setBPlayers(newBPlayers);
+      setCPlayers(newCPlayers);
       setSortStat(stat);
-      await updateTeamsInDB(newAPlayers, newBPlayers);
+      await updateTeamsInDB(newAPlayers, newBPlayers, newCPlayers);
     },
     [tournament.players, getPlayerStat, updateTeamsInDB, isReadOnly]
   );
@@ -142,25 +164,50 @@ const ABDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourname
       currentPlayerNames.size === teamPlayerNames.size &&
       [...currentPlayerNames].every(name => teamPlayerNames.has(name));
 
+    console.log('useEffect triggered:', {
+      currentPlayerNames: [...currentPlayerNames],
+      teamPlayerNames: [...teamPlayerNames],
+      playersMatchTeams,
+      teamsLength: tournament.teams.length,
+      initialized: initializedTournamentId.current === tournament.id,
+      isReadOnly,
+    });
+
     if ((!playersMatchTeams || tournament.teams.length === 0) && tournament.players.length > 0 && !isReadOnly) {
+      console.log('Regenerating teams due to player list mismatch or empty teams');
       (async () => {
         await dividePlayers('combo');
         initializedTournamentId.current = tournament.id;
       })();
     } else if (initializedTournamentId.current !== tournament.id && tournament.players.length > 0) {
-      const newAPlayers = tournament.teams.map(team => team.players[0]).map(name => {
-        const player = tournament.players.find(p => p.name === name);
-        return player || { name, ppd: 0, mpr: 0, paid: false };
+      console.log('Loading existing teams');
+      const newAPlayers: Tournament['players'] = [];
+      const newBPlayers: Tournament['players'] = [];
+      const newCPlayers: Tournament['players'] = [];
+
+      tournament.teams.forEach(team => {
+        if (team.players.length >= 1) {
+          const aPlayer = tournament.players.find(p => p.name === team.players[0]);
+          newAPlayers.push(aPlayer || { name: team.players[0], ppd: 0, mpr: 0, paid: false });
+        }
+        if (team.players.length >= 2) {
+          const bPlayer = tournament.players.find(p => p.name === team.players[1]);
+          newBPlayers.push(bPlayer || { name: team.players[1], ppd: 0, mpr: 0, paid: false });
+        }
+        if (team.players.length >= 3) {
+          const cPlayer = tournament.players.find(p => p.name === team.players[2]);
+          newCPlayers.push(cPlayer || { name: team.players[2], ppd: 0, mpr: 0, paid: false });
+        }
       });
-      const newBPlayers = tournament.teams
-        .filter(team => team.players.length > 1)
-        .map(team => team.players[1])
-        .map(name => {
-          const player = tournament.players.find(p => p.name === name);
-          return player || { name, ppd: 0, mpr: 0, paid: false };
-        });
-      setAPlayers(newAPlayers);
-      setBPlayers(newBPlayers);
+
+      const maxLength = Math.max(newAPlayers.length, newBPlayers.length, newCPlayers.length);
+      while (newAPlayers.length < maxLength) newAPlayers.push({ name: '', ppd: 0, mpr: 0, paid: false });
+      while (newBPlayers.length < maxLength) newBPlayers.push({ name: '', ppd: 0, mpr: 0, paid: false });
+      while (newCPlayers.length < maxLength) newCPlayers.push({ name: '', ppd: 0, mpr: 0, paid: false });
+
+      setAPlayers(newAPlayers.filter(p => p.name));
+      setBPlayers(newBPlayers.filter(p => p.name));
+      setCPlayers(newCPlayers.filter(p => p.name));
       initializedTournamentId.current = tournament.id;
     }
   }, [tournament.id, tournament.players, tournament.teams, dividePlayers, isReadOnly]);
@@ -169,36 +216,36 @@ const ABDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourname
     async (
       fromIndex: number,
       toIndex: number,
-      fromListType: 'aPlayers' | 'bPlayers',
-      toListType: 'aPlayers' | 'bPlayers'
+      fromListType: 'aPlayers' | 'bPlayers' | 'cPlayers',
+      toListType: 'aPlayers' | 'bPlayers' | 'cPlayers'
     ) => {
       if (isReadOnly) return;
 
       const updatedAPlayers = [...aPlayers];
       const updatedBPlayers = [...bPlayers];
+      const updatedCPlayers = [...cPlayers];
 
-      if (fromListType === toListType) {
-        const players = fromListType === 'aPlayers' ? updatedAPlayers : updatedBPlayers;
-        [players[fromIndex], players[toIndex]] = [players[toIndex], players[fromIndex]];
-      } else {
-        const fromPlayers = fromListType === 'aPlayers' ? updatedAPlayers : updatedBPlayers;
-        const toPlayers = toListType === 'aPlayers' ? updatedAPlayers : updatedBPlayers;
-        [fromPlayers[fromIndex], toPlayers[toIndex]] = [toPlayers[toIndex], fromPlayers[fromIndex]];
+      const sourceList = fromListType === 'aPlayers' ? updatedAPlayers : fromListType === 'bPlayers' ? updatedBPlayers : updatedCPlayers;
+      const targetList = toListType === 'aPlayers' ? updatedAPlayers : toListType === 'bPlayers' ? updatedBPlayers : updatedCPlayers;
+
+      if (fromIndex < sourceList.length && toIndex < targetList.length) {
+        [sourceList[fromIndex], targetList[toIndex]] = [targetList[toIndex], sourceList[fromIndex]];
       }
 
       setAPlayers(updatedAPlayers);
       setBPlayers(updatedBPlayers);
+      setCPlayers(updatedCPlayers);
 
-      await updateTeamsInDB(updatedAPlayers, updatedBPlayers);
+      await updateTeamsInDB(updatedAPlayers, updatedBPlayers, updatedCPlayers);
     },
-    [aPlayers, bPlayers, updateTeamsInDB, isReadOnly]
+    [aPlayers, bPlayers, cPlayers, updateTeamsInDB, isReadOnly]
   );
 
   const shufflePlayers = useCallback(
     async (
       groupSetter: React.Dispatch<React.SetStateAction<Tournament['players']>>,
       players: Tournament['players'],
-      groupType: 'aPlayers' | 'bPlayers'
+      groupType: 'aPlayers' | 'bPlayers' | 'cPlayers'
     ) => {
       if (isReadOnly) return;
       setActiveShuffle(groupType);
@@ -226,22 +273,24 @@ const ABDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourname
 
       const updatedAPlayers = groupType === 'aPlayers' ? shuffled : aPlayers;
       const updatedBPlayers = groupType === 'bPlayers' ? shuffled : bPlayers;
+      const updatedCPlayers = groupType === 'cPlayers' ? shuffled : cPlayers;
       setAPlayers(updatedAPlayers);
       setBPlayers(updatedBPlayers);
+      setCPlayers(updatedCPlayers);
 
-      await updateTeamsInDB(updatedAPlayers, updatedBPlayers);
+      await updateTeamsInDB(updatedAPlayers, updatedBPlayers, updatedCPlayers);
     },
-    [aPlayers, bPlayers, updateTeamsInDB, isReadOnly]
+    [aPlayers, bPlayers, cPlayers, updateTeamsInDB, isReadOnly]
   );
 
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex flex-col gap-4">
-        <h2 className="text-xl font-semibold text-[var(--text-highlight)]">A/B Draw</h2>
+        <h2 className="text-xl font-semibold text-[var(--text-highlight)]">ABC Draw Trios</h2>
         {error && !isReadOnly && <p className="text-red-500 text-center">{error}</p>}
         <div className="flex flex-col gap-4">
           <div className="text-[var(--card-text)]">
-            Re-sort players by:
+            Sort players by:
             <div className="flex gap-2 mt-1">
               <Button
                 onClick={() => dividePlayers('combo')}
@@ -267,7 +316,7 @@ const ABDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourname
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <h4 className="text-md text-[var(--card-title)] mb-2">A Players</h4>
               <div className="min-h-[100px]">
@@ -332,6 +381,38 @@ const ABDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourname
                 </a>
               </div>
             </div>
+            <div>
+              <h4 className="text-md text-[var(--card-title)] mb-2">C Players</h4>
+              <div className="min-h-[100px]">
+                {cPlayers.length > 0 ? (
+                  cPlayers.map((player, index) => (
+                    <PlayerCard
+                      key={player.name}
+                      player={player}
+                      index={index}
+                      swapPlayers={swapPlayers}
+                      listType="cPlayers"
+                      sortStat={sortStat}
+                      isReadOnly={isReadOnly}
+                    />
+                  ))
+                ) : (
+                  <p className="text-[var(--card-text)] text-center">No C Players</p>
+                )}
+              </div>
+              <div className="flex justify-center mt-2">
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (!isReadOnly) shufflePlayers(setCPlayers, cPlayers, 'cPlayers');
+                  }}
+                  className={`text-[var(--text-highlight)] ${isReadOnly ? 'opacity-20 cursor-not-allowed' : 'hover:opacity-70'}`}
+                >
+                  <FaRandom className={activeShuffle === 'cPlayers' && !isReadOnly ? 'animate-spin' : ''} />
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -339,4 +420,4 @@ const ABDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourname
   );
 };
 
-export default ABDrawTeams;
+export default AbcDrawTriosTeams;
