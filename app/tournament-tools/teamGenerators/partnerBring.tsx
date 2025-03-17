@@ -15,6 +15,7 @@ interface PlayerCardProps {
   isReadOnly?: boolean;
 }
 
+// PlayerCard Component: Renders a draggable player card
 const PlayerCard: React.FC<PlayerCardProps> = ({ player, index, swapPlayers, listType, isReadOnly = false }) => {
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -49,16 +50,19 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, index, swapPlayers, lis
   );
 };
 
+// Main Component: Manages team generation and drag-and-drop for Partner Bring format
 const PartnerBringTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTournament: Tournament) => void; isReadOnly?: boolean }> = ({
   tournament,
   onUpdate,
   isReadOnly = false,
 }) => {
-  const [player1List, setPlayer1List] = useState<Tournament['players']>([]);
-  const [player2List, setPlayer2List] = useState<Tournament['players']>([]);
-  const [error, setError] = useState<string | null>(null);
-  const initializedTournamentId = useRef<string | null>(null);
+  // State Management
+  const [player1List, setPlayer1List] = useState<Tournament['players']>([]); // First player of each pair
+  const [player2List, setPlayer2List] = useState<Tournament['players']>([]); // Second player of each pair
+  const [error, setError] = useState<string | null>(null); // Error message for database updates
+  const initializedTournamentId = useRef<string | null>(null); // Tracks if tournament has been initialized
 
+  // Builds team objects from player lists for database storage
   const generateTeams = (player1List: Tournament['players'], player2List: Tournament['players']): { name: string; players: string[] }[] => {
     return player1List.map((player1, index) => {
       const player2 = player2List[index];
@@ -71,61 +75,50 @@ const PartnerBringTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
     });
   };
 
+  // Updates the tournament teams in the database and notifies parent component
   const updateTeamsInDB = useCallback(
     async (player1List: Tournament['players'], player2List: Tournament['players']) => {
       if (isReadOnly) return;
       try {
         const teams = generateTeams(player1List, player2List);
-        console.log('Updating teams in DB:', teams); // Debug log
         const { data, error } = await supabase
           .from('tournaments')
           .update({ teams })
           .eq('id', tournament.id)
           .select()
           .single();
-        if (error) {
-          console.error('Supabase error:', error);
-          throw error;
-        }
-        console.log('DB updated successfully:', data);
+        if (error) throw error;
         onUpdate(data);
       } catch (err) {
         console.error('Error updating teams:', (err as Error).message);
         setError('Failed to update teams in database.');
       }
     },
-    [tournament.id, onUpdate, isReadOnly] // Dependencies for updateTeamsInDB
+    [tournament.id, onUpdate, isReadOnly]
   );
 
-  const splitPlayers = useCallback(async () => {
-    if (isReadOnly) return;
-    const newPlayer1List = [];
-    const newPlayer2List = [];
-    for (let i = 0; i < tournament.players.length; i++) {
-      if (i % 2 === 0) {
-        newPlayer1List.push(tournament.players[i]);
-      } else {
-        newPlayer2List.push(tournament.players[i]);
-      }
-    }
-    setPlayer1List(newPlayer1List);
-    setPlayer2List(newPlayer2List);
-    await updateTeamsInDB(newPlayer1List, newPlayer2List);
-  }, [tournament.players, updateTeamsInDB, isReadOnly]);
-
+  // Initialization Effect: Sets up teams on load or when teams are empty
   useEffect(() => {
-    const currentPlayerNames = new Set(tournament.players.map(p => p.name));
-    const teamPlayerNames = new Set(tournament.teams.flatMap(team => team.players));
-    const playersMatchTeams =
-      currentPlayerNames.size === teamPlayerNames.size &&
-      [...currentPlayerNames].every(name => teamPlayerNames.has(name));
-
-    if ((!playersMatchTeams || tournament.teams.length === 0) && tournament.players.length > 0 && !isReadOnly) {
+    if (tournament.teams.length === 0 && tournament.players.length > 0 && !isReadOnly) {
+      // Initial load or regeneration: split players
       (async () => {
-        await splitPlayers();
+        // Splits players into two lists (Player 1 and Player 2) alternately
+        const newPlayer1List = [];
+        const newPlayer2List = [];
+        for (let i = 0; i < tournament.players.length; i++) {
+          if (i % 2 === 0) {
+            newPlayer1List.push(tournament.players[i]);
+          } else {
+            newPlayer2List.push(tournament.players[i]);
+          }
+        }
+        setPlayer1List(newPlayer1List);
+        setPlayer2List(newPlayer2List);
+        await updateTeamsInDB(newPlayer1List, newPlayer2List);
         initializedTournamentId.current = tournament.id;
       })();
     } else if (initializedTournamentId.current !== tournament.id && tournament.players.length > 0) {
+      // Load existing teams from database if not yet initialized
       const newPlayer1List = tournament.teams.map(team => team.players[0]).map(name => {
         const player = tournament.players.find(p => p.name === name);
         return player || { name, ppd: 0, mpr: 0, paid: false };
@@ -141,8 +134,9 @@ const PartnerBringTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
       setPlayer2List(newPlayer2List);
       initializedTournamentId.current = tournament.id;
     }
-  }, [tournament.id, tournament.players, tournament.teams, isReadOnly, splitPlayers]);
+  }, [tournament.id, tournament.players, tournament.teams, isReadOnly, updateTeamsInDB]);
 
+  // Handles drag-and-drop swapping of players between lists
   const swapPlayers = async (
     fromIndex: number,
     toIndex: number,
@@ -165,10 +159,10 @@ const PartnerBringTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
 
     setPlayer1List(updatedPlayer1List);
     setPlayer2List(updatedPlayer2List);
-
     await updateTeamsInDB(updatedPlayer1List, updatedPlayer2List);
   };
 
+  // Render UI
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex flex-col gap-4">

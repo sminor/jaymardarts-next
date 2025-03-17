@@ -17,6 +17,7 @@ interface PlayerCardProps {
   isReadOnly?: boolean;
 }
 
+// PlayerCard Component: Renders a draggable player card with stats tooltip
 const PlayerCard: React.FC<PlayerCardProps> = ({ player, index, swapPlayers, listType, sortStat, isReadOnly = false }) => {
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -59,17 +60,21 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, index, swapPlayers, lis
   );
 };
 
+// Main Component: Manages team generation and drag-and-drop for Parity Draw format
 const ParityDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTournament: Tournament) => void; isReadOnly?: boolean }> = ({
   tournament,
   onUpdate,
   isReadOnly = false,
 }) => {
-  const [aPlayers, setAPlayers] = useState<Tournament['players']>([]);
-  const [bPlayers, setBPlayers] = useState<Tournament['players']>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [sortStat, setSortStat] = useState<'combo' | 'ppd' | 'mpr'>('combo');
-  const initializedTournamentId = useRef<string | null>(null);
+  // State Management
+  const [aPlayers, setAPlayers] = useState<Tournament['players']>([]); // Top half players
+  const [bPlayers, setBPlayers] = useState<Tournament['players']>([]); // Bottom half players
+  const [error, setError] = useState<string | null>(null); // Error message for database updates
+  const [sortStat, setSortStat] = useState<'combo' | 'ppd' | 'mpr'>('combo'); // Current sorting statistic
+  const initializedTournamentId = useRef<string | null>(null); // Tracks if tournament has been initialized
 
+  // Utility Functions
+  // Calculates a player's stat based on the selected type (combo, ppd, or mpr)
   const getPlayerStat = useCallback((player: Tournament['players'][0], stat: 'combo' | 'ppd' | 'mpr') => {
     switch (stat) {
       case 'combo':
@@ -79,10 +84,11 @@ const ParityDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTour
       case 'mpr':
         return player.mpr;
       default:
-        return player.ppd + player.mpr * 10;
+        return player.ppd + player.mpr * 10; // Fallback to combo
     }
   }, []);
 
+  // Builds team objects from player lists for database storage
   const generateTeams = useCallback((aPlayersList: Tournament['players'], bPlayersList: Tournament['players']) => {
     return aPlayersList.map((aPlayer, index) => {
       const bPlayer = bPlayersList[index];
@@ -95,23 +101,19 @@ const ParityDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTour
     });
   }, []);
 
+  // Updates the tournament teams in the database and notifies parent component
   const updateTeamsInDB = useCallback(
     async (aPlayersList: Tournament['players'], bPlayersList: Tournament['players']) => {
       if (isReadOnly) return;
       try {
         const teams = generateTeams(aPlayersList, bPlayersList);
-        console.log('Updating teams in DB:', teams);
         const { data, error } = await supabase
           .from('tournaments')
           .update({ teams })
           .eq('id', tournament.id)
           .select()
           .single();
-        if (error) {
-          console.error('Supabase error:', error);
-          throw error;
-        }
-        console.log('DB updated successfully:', data);
+        if (error) throw error;
         onUpdate(data);
       } catch (err) {
         console.error('Error updating teams:', (err as Error).message);
@@ -121,6 +123,7 @@ const ParityDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTour
     [tournament.id, onUpdate, isReadOnly, generateTeams]
   );
 
+  // Sorts players by the specified stat and assigns them to A (top half) and B (bottom half) lists
   const dividePlayers = useCallback(
     async (stat: 'combo' | 'ppd' | 'mpr') => {
       if (isReadOnly) return;
@@ -142,19 +145,16 @@ const ParityDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTour
     [tournament.players, getPlayerStat, updateTeamsInDB, isReadOnly]
   );
 
+  // Initialization Effect: Sets up teams on load or after "Regenerate Teams" when teams are empty
   useEffect(() => {
-    const currentPlayerNames = new Set(tournament.players.map(p => p.name));
-    const teamPlayerNames = new Set(tournament.teams.flatMap(team => team.players));
-    const playersMatchTeams =
-      currentPlayerNames.size === teamPlayerNames.size &&
-      [...currentPlayerNames].every(name => teamPlayerNames.has(name));
-
-    if ((!playersMatchTeams || tournament.teams.length === 0) && tournament.players.length > 0 && !isReadOnly) {
+    if (tournament.teams.length === 0 && tournament.players.length > 0 && !isReadOnly) {
+      // Initial load or regeneration: sort by combo
       (async () => {
         await dividePlayers('combo');
         initializedTournamentId.current = tournament.id;
       })();
     } else if (initializedTournamentId.current !== tournament.id && tournament.players.length > 0) {
+      // Load existing teams from database if not yet initialized
       const newAPlayers = tournament.teams.map(team => team.players[0]).map(name => {
         const player = tournament.players.find(p => p.name === name);
         return player || { name, ppd: 0, mpr: 0, paid: false };
@@ -172,6 +172,7 @@ const ParityDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTour
     }
   }, [tournament.id, tournament.players, tournament.teams, dividePlayers, isReadOnly]);
 
+  // Handles drag-and-drop swapping of players between lists
   const swapPlayers = useCallback(
     async (
       fromIndex: number,
@@ -195,12 +196,12 @@ const ParityDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTour
 
       setAPlayers(updatedAPlayers);
       setBPlayers(updatedBPlayers);
-
       await updateTeamsInDB(updatedAPlayers, updatedBPlayers);
     },
     [aPlayers, bPlayers, updateTeamsInDB, isReadOnly]
   );
 
+  // Render UI
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex flex-col gap-4">

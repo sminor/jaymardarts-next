@@ -13,6 +13,7 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
   const [newPlayer, setNewPlayer] = useState({ name: '', ppd: '', mpr: '' });
   const [formError, setFormError] = useState<string | null>(null);
   const searchResultsRef = useRef<HTMLUListElement>(null); // Ref for scrolling
+  const searchContainerRef = useRef<HTMLDivElement>(null); // Ref for search container
   const isReadOnly = tournament.tournament_completed ?? false; // Determine read-only state
 
   // Fetch and scrape players once on mount
@@ -45,7 +46,7 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
   }, []);
 
   // Advanced search functionality
-  const filterPlayers = (players: Player[], term: string): Player[] => {
+  const filterPlayers = (players: Player[], term: string, currentPlayers: Player[]): Player[] => {
     if (!term.trim()) return [];
     const searchTerms = term.toLowerCase().trim().split(/\s+/);
     return players.filter((player) => {
@@ -61,10 +62,10 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
         const [firstTerm, secondTerm] = searchTerms;
         return firstName.includes(firstTerm) && lastName.includes(secondTerm);
       }
-    }).filter((player) => !tournament.players.some((tPlayer) => tPlayer.name === player.name));
+    }).filter((player) => !currentPlayers.some((tPlayer) => tPlayer.name === player.name));
   };
 
-  const filteredPlayers = filterPlayers(allPlayers, searchTerm);
+  const filteredPlayers = filterPlayers(allPlayers, searchTerm, tournament.players);
 
   // Auto-select first search result when results first appear
   useEffect(() => {
@@ -75,6 +76,21 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
       }
     }
   }, [filteredPlayers, selectedIndex, isReadOnly]);
+
+  // Clear search term when clicking outside the search container
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!isReadOnly && searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setSearchTerm('');
+        setSelectedIndex(-1);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isReadOnly]);
 
   // Keyboard navigation for search results with scrolling
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -111,19 +127,25 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
       });
     } else if (e.key === 'Enter' && selectedIndex >= 0) {
       e.preventDefault();
-      addPlayer(filteredPlayers[selectedIndex]);
-      // Move selection to the next available player, or reset if none left
-      setSelectedIndex((prev) => {
-        const remainingPlayers = filterPlayers(allPlayers, searchTerm);
-        if (remainingPlayers.length > 0) {
+      const playerToAdd = filteredPlayers[selectedIndex];
+      addPlayer(playerToAdd);
+      // Simulate the updated player list to check remaining matches
+      const updatedPlayers = [{ ...playerToAdd, paid: false }, ...tournament.players];
+      const remainingPlayers = filterPlayers(allPlayers, searchTerm, updatedPlayers);
+      if (remainingPlayers.length === 0) {
+        // Clear search if no matches remain
+        setSearchTerm('');
+        setSelectedIndex(-1);
+      } else {
+        // Move selection to the next available player
+        setSelectedIndex((prev) => {
           const newIndex = prev < remainingPlayers.length ? prev : remainingPlayers.length - 1;
           if (searchResultsRef.current && newIndex >= 0) {
             searchResultsRef.current.children[newIndex]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           }
           return newIndex;
-        }
-        return -1; // Reset if no players remain
-      });
+        });
+      }
     }
   };
 
@@ -164,6 +186,13 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
     if (isReadOnly) return; // Prevent adding in read-only mode
     const updatedPlayers = [{ ...player, paid: false }, ...tournament.players];
     updatePlayersInDatabase(updatedPlayers);
+
+    // Simulate the updated player list to check remaining matches
+    const remainingPlayers = filterPlayers(allPlayers, searchTerm, updatedPlayers);
+    if (remainingPlayers.length === 0) {
+      setSearchTerm('');
+      setSelectedIndex(-1);
+    }
   };
 
   const removePlayer = (player: Player) => {
@@ -177,18 +206,34 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
     const updatedPlayers = tournament.players.map((p) =>
       p.name === player.name ? { ...p, paid: !p.paid } : p
     );
-    updatePlayersInDatabase(updatedPlayers);
+    updatePaidStatusInDatabase(updatedPlayers);
   };
 
+  // Updates players and clears teams in the database (for add/remove)
   const updatePlayersInDatabase = async (players: Player[]) => {
     const { data, error } = await supabase
       .from('tournaments')
-      .update({ players })
+      .update({ players, teams: [] }) // Clear teams when players change
       .eq('id', tournament.id)
       .select()
       .single();
     if (error) {
-      console.error('Error updating players:', error.message);
+      console.error('Error updating players and teams:', error.message);
+    } else {
+      onUpdate(data);
+    }
+  };
+
+  // Updates players only in the database (for paid status changes)
+  const updatePaidStatusInDatabase = async (players: Player[]) => {
+    const { data, error } = await supabase
+      .from('tournaments')
+      .update({ players }) // Only update players, leave teams intact
+      .eq('id', tournament.id)
+      .select()
+      .single();
+    if (error) {
+      console.error('Error updating paid status:', error.message);
     } else {
       onUpdate(data);
     }
@@ -206,7 +251,7 @@ const TournamentPlayers: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
   return (
     <div className="mt-4">
       <h3 className="text-md text-[var(--card-title)] mb-2">Search Players</h3>
-      <div className="relative w-full max-w-[400px]">
+      <div ref={searchContainerRef} className="relative w-full max-w-[400px]">
         <input
           type="text"
           placeholder="Search players..."

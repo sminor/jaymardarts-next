@@ -1,8 +1,8 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/utils/supabaseClient';
 import { Tournament, Location } from './types';
-import { tournamentTypes } from './teamGenerators'; // Import the registry
+import { tournamentTypes } from './teamGenerators';
 
 const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTournament: Tournament) => void }> = ({ tournament, onUpdate }) => {
   const [formData, setFormData] = useState({
@@ -17,6 +17,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
   });
   const [error, setError] = useState<string | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setFormData({
@@ -44,40 +45,56 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
     fetchLocations();
   }, []);
 
-  const debounce = <T extends (arg: Partial<Tournament>) => void>(func: T, wait: number) => {
-    let timeout: NodeJS.Timeout;
-    return (arg: Parameters<T>[0]): void => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func(arg), wait);
-    };
-  };
+  const updateDatabase = useCallback(async (updatedData: Partial<Tournament>) => {
+    try {
+      const saveData: Partial<Tournament> = {
+        ...updatedData,
+        ...(updatedData.entry_fee !== undefined && { entry_fee: Number(updatedData.entry_fee) }),
+        ...(updatedData.bar_contribution !== undefined && { bar_contribution: Number(updatedData.bar_contribution) }),
+        ...(updatedData.usage_fee !== undefined && { usage_fee: Number(updatedData.usage_fee) }),
+        ...(updatedData.bonus_money !== undefined && { bonus_money: Number(updatedData.bonus_money) }),
+      };
 
-  const updateDatabase = async (updatedData: Partial<Tournament>) => {
-    const saveData: Partial<Tournament> = {
-      ...updatedData,
-      ...(updatedData.entry_fee !== undefined && { entry_fee: Number(updatedData.entry_fee) }),
-      ...(updatedData.bar_contribution !== undefined && { bar_contribution: Number(updatedData.bar_contribution) }),
-      ...(updatedData.usage_fee !== undefined && { usage_fee: Number(updatedData.usage_fee) }),
-      ...(updatedData.bonus_money !== undefined && { bonus_money: Number(updatedData.bonus_money) }),
-    };
+      const { data, error } = await supabase
+        .from('tournaments')
+        .update(saveData)
+        .eq('id', tournament.id)
+        .select()
+        .single();
 
-    const { data, error } = await supabase
-      .from('tournaments')
-      .update(saveData)
-      .eq('id', tournament.id)
-      .select()
-      .single();
+      if (error) throw error;
+      if (!data) throw new Error('No data returned from update');
 
-    if (error) {
-      console.error('Error updating tournament:', error.message);
-      setError('Failed to save changes.');
-    } else {
       onUpdate(data);
       setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error('Error updating tournament:', errorMessage);
+      setError(`Failed to save changes: ${errorMessage}`);
     }
-  };
+  }, [tournament.id, onUpdate]);
 
-  const debouncedUpdate = debounce(updateDatabase, 500);
+  const debouncedUpdate = useCallback(
+    (updatedData: Partial<Tournament>) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
+      timeoutRef.current = setTimeout(() => {
+        updateDatabase(updatedData);
+        timeoutRef.current = null;
+      }, 500);
+    },
+    [updateDatabase]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -90,7 +107,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
           type === 'checkbox'
             ? checked
             : name === 'payout_spots'
-            ? parseInt(value, 10)
+            ? parseInt(value, 10) || 1
             : name === 'entry_fee' || name === 'bar_contribution' || name === 'usage_fee' || name === 'bonus_money'
             ? parseFloat(value || '0').toFixed(2)
             : value,
@@ -101,7 +118,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
           type === 'checkbox'
             ? checked
             : name === 'payout_spots'
-            ? parseInt(value, 10)
+            ? parseInt(value, 10) || 1
             : name === 'entry_fee' || name === 'bar_contribution' || name === 'usage_fee' || name === 'bonus_money'
             ? parseFloat(value || '0')
             : value,
@@ -112,17 +129,12 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
           setError('Tournament Type is required.');
         } else {
           setError(null);
-          // Immediately clear teams when tournament type changes
           updateDatabase({ ...updateData, teams: [] });
         }
       } else if (name === 'location' && !value.trim()) {
         setError('Location is required.');
       } else {
         setError(null);
-      }
-
-      // Debounce other updates
-      if (name !== 'tournament_type') {
         debouncedUpdate(updateData);
       }
 
@@ -155,7 +167,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
     <span className="text-red-500">${totalEntryFees.toFixed(2)} (${totalCollectedFees.toFixed(2)})</span>
   );
 
-  const calculatePayouts = () => {
+  const calculatePayouts = useCallback(() => {
     if (totalPrizePool === 0) {
       return new Array(payoutSpots).fill(0);
     }
@@ -211,10 +223,10 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
     }
 
     return payouts;
-  };
+  }, [totalPrizePool, payoutSpots, entryFee]);
 
-  const roundedPayouts = calculatePayouts();
-  const isReadOnly = formData.tournament_completed;
+  const roundedPayouts = useMemo(() => calculatePayouts(), [calculatePayouts]);
+  const isFormReadOnly = formData.tournament_completed;
 
   return (
     <section className="p-4">
@@ -239,8 +251,8 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                       name="name"
                       value={formData.name}
                       onChange={handleInputChange}
-                      disabled={isReadOnly}
-                      className={`p-2 h-[42px] w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={isFormReadOnly}
+                      className={`p-2 h-[42px] w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isFormReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                     />
                   </div>
                 </td>
@@ -256,8 +268,8 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                       name="date"
                       value={formData.date}
                       onChange={handleInputChange}
-                      disabled={isReadOnly}
-                      className={`p-2 h-[42px] w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={isFormReadOnly}
+                      className={`p-2 h-[42px] w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isFormReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                     />
                   </div>
                 </td>
@@ -273,8 +285,8 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                       value={formData.location}
                       onChange={handleInputChange}
                       required
-                      disabled={isReadOnly}
-                      className={`p-2 h-[42px] w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={isFormReadOnly}
+                      className={`p-2 h-[42px] w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isFormReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {locations.map((loc) => (
                         <option key={loc.id} value={loc.name}>
@@ -297,8 +309,8 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                       value={formData.tournament_type || ''}
                       onChange={handleInputChange}
                       required
-                      disabled={isReadOnly}
-                      className={`p-2 h-[42px] w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={isFormReadOnly}
+                      className={`p-2 h-[42px] w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isFormReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {tournamentTypes.map((type) => (
                         <option key={type.fileName} value={type.name}>
@@ -320,8 +332,8 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                       name="tournament_code"
                       value={formData.tournament_code || ''}
                       onChange={handleInputChange}
-                      disabled={isReadOnly}
-                      className={`p-2 h-[42px] w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={isFormReadOnly}
+                      className={`p-2 h-[42px] w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isFormReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                     />
                   </div>
                 </td>
@@ -341,8 +353,8 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                         onChange={handleInputChange}
                         step="1"
                         min="0"
-                        disabled={isReadOnly}
-                        className={`p-2 h-[42px] pl-6 w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={isFormReadOnly}
+                        className={`p-2 h-[42px] pl-6 w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isFormReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                       />
                     </div>
                   </div>
@@ -363,8 +375,8 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                         onChange={handleInputChange}
                         step="1"
                         min="0"
-                        disabled={isReadOnly}
-                        className={`p-2 h-[42px] pl-6 w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={isFormReadOnly}
+                        className={`p-2 h-[42px] pl-6 w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isFormReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                       />
                     </div>
                   </div>
@@ -385,8 +397,8 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                         onChange={handleInputChange}
                         step="1"
                         min="0"
-                        disabled={isReadOnly}
-                        className={`p-2 h-[42px] pl-6 w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={isFormReadOnly}
+                        className={`p-2 h-[42px] pl-6 w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isFormReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                       />
                     </div>
                   </div>
@@ -407,8 +419,8 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                         onChange={handleInputChange}
                         step="1"
                         min="0"
-                        disabled={isReadOnly}
-                        className={`p-2 h-[42px] pl-6 w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={isFormReadOnly}
+                        className={`p-2 h-[42px] pl-6 w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isFormReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                       />
                     </div>
                   </div>
@@ -426,8 +438,8 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                       value={formData.payout_spots ?? ''}
                       onChange={handleInputChange}
                       min="1"
-                      disabled={isReadOnly}
-                      className={`p-2 h-[42px] w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={isFormReadOnly}
+                      className={`p-2 h-[42px] w-full border-1 border-[var(--form-border)] rounded-md bg-[var(--form-background)] text-[var(--select-text)] focus:outline-none ${isFormReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                     />
                   </div>
                 </td>
@@ -473,9 +485,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                   <div className="h-[59px] flex items-center">Bar Input:</div>
                 </td>
                 <td className="align-middle w-1/2">
-                  <div className="h-[59px] flex items-center">
-                    ${totalBarFees.toFixed(2)}
-                  </div>
+                  <div className="h-[59px] flex items-center">${totalBarFees.toFixed(2)}</div>
                 </td>
               </tr>
               <tr className="border-b border-[var(--card-highlight)]">
@@ -483,9 +493,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                   <div className="h-[59px] flex items-center">Usage Fees:</div>
                 </td>
                 <td className="align-middle w-1/2">
-                  <div className="h-[59px] flex items-center">
-                    ${totalUsageFees.toFixed(2)}
-                  </div>
+                  <div className="h-[59px] flex items-center">${totalUsageFees.toFixed(2)}</div>
                 </td>
               </tr>
               <tr className="border-b border-[var(--card-highlight)]">
@@ -493,9 +501,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                   <div className="h-[59px] flex items-center">Bonus Money:</div>
                 </td>
                 <td className="align-middle w-1/2">
-                  <div className="h-[59px] flex items-center">
-                    ${parseFloat((formData.bonus_money ?? 0).toString()).toFixed(2)}
-                  </div>
+                  <div className="h-[59px] flex items-center">${parseFloat((formData.bonus_money ?? 0).toString()).toFixed(2)}</div>
                 </td>
               </tr>
               <tr className="border-b border-[var(--card-highlight)]">
@@ -503,9 +509,7 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                   <div className="h-[59px] flex items-center">Total Prize Pool:</div>
                 </td>
                 <td className="align-middle w-1/2">
-                  <div className="h-[59px] flex items-center">
-                    ${totalPrizePool.toFixed(2)}
-                  </div>
+                  <div className="h-[59px] flex items-center">${totalPrizePool.toFixed(2)}</div>
                 </td>
               </tr>
               <tr className="border-b border-[var(--card-background)]">
@@ -522,14 +526,10 @@ const TournamentDetails: React.FC<{ tournament: Tournament; onUpdate: (updatedTo
                 return (
                   <tr key={index} className={`border-b ${isLastRow ? 'border-[var(--card-background)]' : 'border-[var(--card-highlight)]'}`}>
                     <td className="text-[var(--card-text)] align-middle w-1/2">
-                      <div className="h-[59px] flex items-center">
-                        {index + 1 + getOrdinalSuffix(index + 1)} Place
-                      </div>
+                      <div className="h-[59px] flex items-center">{index + 1 + getOrdinalSuffix(index + 1)} Place</div>
                     </td>
                     <td className="align-middle w-1/2">
-                      <div className="h-[59px] flex items-center">
-                        ${payout.toFixed(2)} (${perPlayer.toFixed(2)} each)
-                      </div>
+                      <div className="h-[59px] flex items-center">${payout.toFixed(2)} (${perPlayer.toFixed(2)} each)</div>
                     </td>
                   </tr>
                 );

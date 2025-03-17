@@ -16,6 +16,7 @@ interface PlayerCardProps {
   isReadOnly?: boolean;
 }
 
+// PlayerCard Component: Renders a draggable player card
 const PlayerCard: React.FC<PlayerCardProps> = ({ player, index, swapPlayers, listType, isReadOnly = false }) => {
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -50,17 +51,20 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, index, swapPlayers, lis
   );
 };
 
+// Main Component: Manages team generation and drag-and-drop for Blind Draw format
 const BlindDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTournament: Tournament) => void; isReadOnly?: boolean }> = ({
   tournament,
   onUpdate,
   isReadOnly = false,
 }) => {
-  const [aPlayers, setAPlayers] = useState<Tournament['players']>([]);
-  const [bPlayers, setBPlayers] = useState<Tournament['players']>([]);
-  const [isShuffling, setIsShuffling] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const initializedTournamentId = useRef<string | null>(null);
+  // State Management
+  const [aPlayers, setAPlayers] = useState<Tournament['players']>([]); // First half of shuffled players
+  const [bPlayers, setBPlayers] = useState<Tournament['players']>([]); // Second half of shuffled players
+  const [isShuffling, setIsShuffling] = useState(false); // Tracks shuffle animation state
+  const [error, setError] = useState<string | null>(null); // Error message for database updates
+  const initializedTournamentId = useRef<string | null>(null); // Tracks if tournament has been initialized
 
+  // Builds team objects from player lists for database storage
   const generateTeams = useCallback((aPlayersList: Tournament['players'], bPlayersList: Tournament['players']) => {
     return aPlayersList.map((aPlayer, index) => {
       const bPlayer = bPlayersList[index];
@@ -73,23 +77,19 @@ const BlindDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourn
     });
   }, []);
 
+  // Updates the tournament teams in the database and notifies parent component
   const updateTeamsInDB = useCallback(
     async (aPlayersList: Tournament['players'], bPlayersList: Tournament['players']) => {
       if (isReadOnly) return;
       try {
         const teams = generateTeams(aPlayersList, bPlayersList);
-        console.log('Updating teams in DB:', teams); // Debug log
         const { data, error } = await supabase
           .from('tournaments')
           .update({ teams })
           .eq('id', tournament.id)
           .select()
           .single();
-        if (error) {
-          console.error('Supabase error:', error);
-          throw error;
-        }
-        console.log('DB updated successfully:', data);
+        if (error) throw error;
         onUpdate(data);
       } catch (err) {
         console.error('Error updating teams:', (err as Error).message);
@@ -99,6 +99,7 @@ const BlindDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourn
     [tournament.id, generateTeams, onUpdate, isReadOnly]
   );
 
+  // Splits players randomly into two lists (A and B)
   const splitPlayers = useCallback(async () => {
     if (isReadOnly) return;
     const shuffledPlayers = [...tournament.players].sort(() => Math.random() - 0.5);
@@ -110,19 +111,16 @@ const BlindDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourn
     await updateTeamsInDB(newAPlayers, newBPlayers);
   }, [tournament.players, updateTeamsInDB, isReadOnly]);
 
+  // Initialization Effect: Sets up teams on load or when teams are empty
   useEffect(() => {
-    const currentPlayerNames = new Set(tournament.players.map(p => p.name));
-    const teamPlayerNames = new Set(tournament.teams.flatMap(team => team.players));
-    const playersMatchTeams =
-      currentPlayerNames.size === teamPlayerNames.size &&
-      [...currentPlayerNames].every(name => teamPlayerNames.has(name));
-
-    if ((!playersMatchTeams || tournament.teams.length === 0) && tournament.players.length > 0 && !isReadOnly) {
+    if (tournament.teams.length === 0 && tournament.players.length > 0 && !isReadOnly) {
+      // Initial load or regeneration: split players randomly
       (async () => {
         await splitPlayers();
         initializedTournamentId.current = tournament.id;
       })();
     } else if (initializedTournamentId.current !== tournament.id && tournament.players.length > 0) {
+      // Load existing teams from database if not yet initialized
       const newAPlayers = tournament.teams.map(team => team.players[0]).map(name => {
         const player = tournament.players.find(p => p.name === name);
         return player || { name, ppd: 0, mpr: 0, paid: false };
@@ -140,6 +138,7 @@ const BlindDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourn
     }
   }, [tournament.id, tournament.players, tournament.teams, splitPlayers, isReadOnly]);
 
+  // Handles drag-and-drop swapping of players between lists
   const swapPlayers = useCallback(
     async (
       fromIndex: number,
@@ -163,12 +162,12 @@ const BlindDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourn
 
       setAPlayers(updatedAPlayers);
       setBPlayers(updatedBPlayers);
-
       await updateTeamsInDB(updatedAPlayers, updatedBPlayers);
     },
     [aPlayers, bPlayers, updateTeamsInDB, isReadOnly]
   );
 
+  // Shuffles all players with animation
   const shuffleAllPlayers = useCallback(
     async () => {
       if (isReadOnly) return;
@@ -204,6 +203,7 @@ const BlindDrawTeams: React.FC<{ tournament: Tournament; onUpdate: (updatedTourn
     [aPlayers, bPlayers, updateTeamsInDB, isReadOnly]
   );
 
+  // Render UI
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex flex-col gap-4">
