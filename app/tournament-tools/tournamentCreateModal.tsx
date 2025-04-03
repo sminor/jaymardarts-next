@@ -168,7 +168,7 @@ export const TournamentCreateModal: React.FC<{
 
         <div>
           <label htmlFor="tournament_code" className="block text-sm font-medium">
-            Tournament Code
+            Tournament Code <span className='italic'>(Optional)</span>
           </label>
           <div className="h-[59px] flex items-center">
             <input
