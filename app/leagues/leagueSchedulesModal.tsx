@@ -235,6 +235,10 @@ const LeagueSchedulesModal: React.FC = () => {
                     day_of_week: league ? league.day_of_week : 'Unknown day',
                     start_time: league ? league.start_time : 'Unknown Time',
                 };
+            }).sort((a, b) => {
+                const aLabel = `${a.leagueName} - ${a.flightName}`.toLowerCase();
+                const bLabel = `${b.leagueName} - ${b.flightName}`.toLowerCase();
+                return aLabel.localeCompare(bLabel);
             });
             setLeagueOptions(newOptions);
         }
