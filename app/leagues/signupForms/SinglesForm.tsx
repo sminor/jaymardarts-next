@@ -285,10 +285,12 @@ const SinglesForm: React.FC<SinglesFormProps> = ({ signup, leagueDetails, onSubm
               type="checkbox"
               id="paid_nda"
               checked={formData.paid_nda}
+              defaultChecked={true}
+              disabled={true}
               onChange={handleInputChange}
               className="mr-2 appearance-none h-5 w-5 border-2 border-[var(--select-border)] rounded-sm checked:bg-[var(--checkbox-checkmark)] focus:outline-none"
             />
-            <label htmlFor="paid_nda">I have paid the yearly NDA sanction fee.</label>
+            <label htmlFor="paid_nda">There is no NDA sanction fee.</label>
           </div>
 
           <h3 className="font-bold">League Selection</h3>
